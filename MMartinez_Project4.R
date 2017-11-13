@@ -96,7 +96,7 @@ cv.age=cv.tree(tree.age,FUN=prune.misclass)
 cv.age
 plot(cv.age)
 
-prune.age=prune.misclass(tree.age,best=27)
+prune.age=prune.misclass(tree.age,best=13)
 plot(prune.age);text(prune.age,pretty=0)
 
 
