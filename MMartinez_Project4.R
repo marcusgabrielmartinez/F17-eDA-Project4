@@ -21,10 +21,10 @@ df <- data.world::query(
 summary(df)
 
 #Add binary column for gender
-df_sex <- df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0))
+df_sex <- df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::select(., -subject)
 
 #Add column for age. 1 = age <= 65, 0 otherwise
-df_age <- df %>% dplyr::mutate(age2 = ifelse(age <= 65, 1, 0))
+df_age <- df %>% dplyr::mutate(age2 = ifelse(age <= 65, 1, 0)) %>% dplyr::select(., -subject)
 
 attach(df)
 attach(df_sex)
