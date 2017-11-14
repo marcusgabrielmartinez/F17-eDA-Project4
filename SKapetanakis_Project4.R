@@ -63,3 +63,35 @@ berr=with(df_sex[-train,],apply( (predmat-sex2)^2,2,mean))
 plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error")
 #test.err=double(13)
 #abline(h=min(test.err),col="red")
+
+
+### Decision Tree
+
+# 1: Build and plot tree for sex.
+tree.sex=tree(sex2~.,data=df_sex)
+summary(tree.sex)
+plot(tree.sex)
+text(tree.sex,pretty=0)
+tree.sex
+
+#Test/training for sex tree.
+set.seed(1011)
+
+train=sample(1:nrow(df_sex),2937)
+tree.sex=tree(as.factor(sex2)~.-sex,df_sex,subset=train)
+
+plot(tree.sex);text(tree.sex,pretty=0)
+
+#predict with test data
+tree.pred=predict(tree.sex,df_sex[-train,],type="class")
+with(df_sex[-train,],table(tree.pred,sex2))
+
+#Pruning for sex tree.
+cv.sex=cv.tree(tree.sex,FUN=prune.tree)
+cv.sex
+plot(cv.sex) #lowest misclassification error rate at tree of size 17 
+prune.sex=prune.tree(tree.sex,best=17)
+plot(prune.sex);text(prune.sex,pretty=0)
+
+tree.pred=predict(prune.sex,df_sex[-train,],type="class")
+with(df_sex[-train,],table(tree.pred,sex2))
