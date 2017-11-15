@@ -8,6 +8,7 @@ require(ggplot2)
 library(leaps)
 library(glmnet)
 require(tree)
+require(randomForest)
 
 data.world::set_config(save_config(auth_token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJwcm9kLXVzZXItY2xpZW50Om1hcmN1c2dhYmUtdXQiLCJpc3MiOiJhZ2VudDptYXJjdXNnYWJlLXV0OjowYjE2NDQzOC1mYzRlLTRhNDktYWY1MC1iMWU1YjViYmIzYzMiLCJpYXQiOjE0ODQ4NjgyNjMsInJvbGUiOlsidXNlcl9hcGlfcmVhZCIsInVzZXJfYXBpX3dyaXRlIl0sImdlbmVyYWwtcHVycG9zZSI6dHJ1ZX0.Eb9i31mYAv6zQGjlze-PbiBJ_5_JNBDIZn51wcPnnNPny_ih2SSN9Ur_LVyRltEbrReNXM5b371XWrmMiexEKw"))
 #vignette("quickstart", package = "data.world")
@@ -24,7 +25,7 @@ summary(df)
 df_sex <- df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::select(., -subject)
 
 #Add column for age. 1 = age <= 65, 0 otherwise
-df_age <- df %>% dplyr::mutate(age2 = ifelse(age <= 65, 1, 0)) %>% dplyr::select(., -subject)
+df_age <- df %>% dplyr::mutate(age2 = ifelse(age <= 65, 1, 0)) %>% dplyr::select(., -subject, -sex, as.factor(sex))
 
 attach(df)
 attach(df_sex)
@@ -102,6 +103,26 @@ plot(prune.age);text(prune.age,pretty=0)
 
 tree.pred=predict(prune.age,df_age[-train,],type="class")
 with(df_age[-train,],table(tree.pred,age2))
+
+##Random Forests Section##
+set.seed(101)
+dim(df_age)
+train=sample(1:nrow(df_age),2937)
+
+rf.age=randomForest(as.factor(age2)~.-age,data=df_age,subset=train)
+rf.age
+
+oob.err=double(21)
+test.err=double(21)
+for(mtry in 1:21){
+  fit=randomForest(age2~.-age,data=df_age,subset=train,mtry=mtry,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_age[-train,])
+  test.err[mtry]=with(df_age[-train,],mean((age2-pred)^2))
+  cat(mtry," ")
+}
+matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
 
 # ##Support Vector Machine Section## Not working!
 # 
