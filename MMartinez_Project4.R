@@ -22,7 +22,7 @@ df <- data.world::query(
 summary(df)
 
 #Add binary column for gender
-df_sex <- df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::select(., -subject)
+df_sex <- df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::select(., -subject, - age, as.factor(age))
 
 #Add column for age. 1 = age <= 65, 0 otherwise
 df_age <- df %>% dplyr::mutate(age2 = ifelse(age <= 65, 1, 0)) %>% dplyr::select(., -subject, -sex, as.factor(sex))
@@ -105,6 +105,8 @@ tree.pred=predict(prune.age,df_age[-train,],type="class")
 with(df_age[-train,],table(tree.pred,age2))
 
 ##Random Forests Section##
+
+# Random Forests for Age
 set.seed(101)
 dim(df_age)
 train=sample(1:nrow(df_age),2937)
@@ -119,6 +121,26 @@ for(mtry in 1:21){
   oob.err[mtry]=fit$mse[400]
   pred=predict(fit,df_age[-train,])
   test.err[mtry]=with(df_age[-train,],mean((age2-pred)^2))
+  cat(mtry," ")
+}
+matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
+
+#Random Forests for Sex
+set.seed(101)
+dim(df_sex)
+train=sample(1:nrow(df_sex),2937)
+
+rf.sex=randomForest(as.factor(sex2)~.-sex,data=df_sex,subset=train)
+rf.sex
+
+oob.err=double(21)
+test.err=double(21)
+for(mtry in 1:21){
+  fit=randomForest(sex2~.-sex,data=df_sex,subset=train,mtry=mtry,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_sex[-train,])
+  test.err[mtry]=with(df_sex[-train,],mean((sex2-pred)^2))
   cat(mtry," ")
 }
 matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
