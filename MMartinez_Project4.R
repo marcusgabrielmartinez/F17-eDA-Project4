@@ -9,6 +9,7 @@ library(leaps)
 library(glmnet)
 require(tree)
 require(randomForest)
+require(gbm)
 
 data.world::set_config(save_config(auth_token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJwcm9kLXVzZXItY2xpZW50Om1hcmN1c2dhYmUtdXQiLCJpc3MiOiJhZ2VudDptYXJjdXNnYWJlLXV0OjowYjE2NDQzOC1mYzRlLTRhNDktYWY1MC1iMWU1YjViYmIzYzMiLCJpYXQiOjE0ODQ4NjgyNjMsInJvbGUiOlsidXNlcl9hcGlfcmVhZCIsInVzZXJfYXBpX3dyaXRlIl0sImdlbmVyYWwtcHVycG9zZSI6dHJ1ZX0.Eb9i31mYAv6zQGjlze-PbiBJ_5_JNBDIZn51wcPnnNPny_ih2SSN9Ur_LVyRltEbrReNXM5b371XWrmMiexEKw"))
 #vignette("quickstart", package = "data.world")
@@ -22,10 +23,10 @@ df <- data.world::query(
 summary(df)
 
 #Add binary column for gender
-df_sex <- df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::select(., -subject, - age, as.factor(age))
+df_sex <- df %>% dplyr::select(., -subject) %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::mutate(age = as.factor(age))
 
 #Add column for age. 1 = age <= 65, 0 otherwise
-df_age <- df %>% dplyr::mutate(age2 = ifelse(age <= 65, 1, 0)) %>% dplyr::select(., -subject, -sex, as.factor(sex))
+df_age <- df %>% dplyr::select(., -subject) %>% dplyr::mutate(age2 = ifelse(age <= 65, 1, 0)) %>% dplyr::mutate(sex = as.factor(sex))
 
 attach(df)
 attach(df_sex)
@@ -114,9 +115,9 @@ train=sample(1:nrow(df_age),2937)
 rf.age=randomForest(as.factor(age2)~.-age,data=df_age,subset=train)
 rf.age
 
-oob.err=double(21)
-test.err=double(21)
-for(mtry in 1:21){
+oob.err=double(20)
+test.err=double(20)
+for(mtry in 1:20){
   fit=randomForest(age2~.-age,data=df_age,subset=train,mtry=mtry,ntree=400)
   oob.err[mtry]=fit$mse[400]
   pred=predict(fit,df_age[-train,])
@@ -134,9 +135,9 @@ train=sample(1:nrow(df_sex),2937)
 rf.sex=randomForest(as.factor(sex2)~.-sex,data=df_sex,subset=train)
 rf.sex
 
-oob.err=double(21)
-test.err=double(21)
-for(mtry in 1:21){
+oob.err=double(20)
+test.err=double(20)
+for(mtry in 1:20){
   fit=randomForest(sex2~.-sex,data=df_sex,subset=train,mtry=mtry,ntree=400)
   oob.err[mtry]=fit$mse[400]
   pred=predict(fit,df_sex[-train,])
@@ -145,6 +146,19 @@ for(mtry in 1:21){
 }
 matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
 legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
+
+##Boosting Section##
+boost.age=gbm(age2~.-age,data=df_age[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+summary(boost.age)
+plot(boost.age,i="lstat")
+plot(boost.age,i="rm")
+
+n.trees=seq(from=100,to=10000,by=100)
+predmat=predict(boost.age,newdata=df_age[-train,],n.trees=n.trees)
+
+berr=with(df_age[-train,],apply( (predmat-age2)^2,2,mean))
+plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error")
+abline(h=min(test.err),col="red")
 
 # ##Support Vector Machine Section## Not working!
 # 
