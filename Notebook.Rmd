@@ -52,9 +52,18 @@ df <- data.world::query(
 ```
 
 ## Setup
+We created several dataframes for our analyses. 
+```{r}
+attach(df)
 
+df_age <- df %>% dplyr::select(., -subject) %>% dplyr::mutate(age2 = ifelse(age <= 65, 1, 0)) %>% dplyr::mutate(sex = as.factor(sex))
 
+df_sex <- df %>% dplyr::select(., -subject) %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::mutate(age = as.factor(age))
 
+df_tot_nums = df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::select(-sex,-subject,-motor_updrs)
+
+train=sample(1:nrow(df_tot_nums),2937)
+```
 ## **Introduction** 
 
 "This dataset is composed of a range of biomedical voice measurements from 42 people with early-stage Parkinson's disease recruited to a six-month trial of a telemonitoring device for remote symptom progression monitoring. The recordings were automatically captured in the patient's homes.
@@ -78,16 +87,72 @@ PPE - A nonlinear measure of fundamental frequency variation
 This document will compare models based on the predictors chosen by best subset selection, forward selection, and backward selection. These models include Logistic Regression, Linear Discriminant Analysis, Quadratic Discriminant Analysis, and K-Nearest Neighbors.
 
 ## Predicting Parkinson's Severity
+We used boosting and random forests to model and predict total updrs, a measure of Parkinson's severity.
+### Boosting
+```{r}
+boost.parkinsons=gbm(total_updrs~.,data=df_tot_nums[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+summary(boost.parkinsons,plotit=FALSE)
+```
+The boosting model shows that age is the most significant predictor in the model. After that, dfa, tes_time, binary sex status, and hnr, as well a few other variables contribute more than 1%.
 
+Next, we looked at the error from this model.
+```{r}
+n.trees=seq(from=100,to=10000,by=100)
+predmat=predict(boost.parkinsons,newdata=df_tot_nums[-train,],n.trees=n.trees)
+dim(predmat)
+
+berr=with(df_tot_nums[-train,],apply( (predmat-total_updrs)^2,2,mean))
+renderPlot(plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
+renderPlot(abline(h=min(berr),col="red"))
+```
+The error with 10000 trees gets quite low, which is a significant improvement over the models found in the previous project.
+
+### Random Forest
+We also used a random forest model to predict total updrs.
+```{r}
+rf.total=randomForest(total_updrs~.,data=df_tot_nums,subset=train)
+rf.total
+```
+This shows that the total variance explained is 80%.
+
+We looked at the testing error and out-of-bag error estimate for this model for mtry of 1 through 19, the total number of predictors. Mtry of 19 is the same as bagging.
+```{r}
+dim(df_tot_nums)
+oob.err=double(19)
+test.err=double(19)
+for(mtry in 1:19){
+  fit=randomForest(total_updrs~.,data=df_tot_nums,subset=train,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_tot_nums[-train,])
+  test.err[mtry]=with(df_tot_nums[-train,],mean((total_updrs-pred)^2))
+  cat(mtry," ")
+}
+renderPlot(matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error"))
+renderPlot(legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue")))
+```
+Although tihs error seems to be jumping around quite a bit, it is important to note taht the y axis is only spaning 0.02. The dips in the error may be due to including correlated variables, of which there are a significant number. Boosting does a better job in this regard than random forests.
+
+### Comparison to Subset Selection for Parkinson's Severity
+Boosting and random forests do a much better job of explaining variance in the total updrs, which is the main purpose of this dataset. Boosting also has good prediction accuracy in regards to this outcome.
+
+K means clustering between total updrs and age (the most significant predictor in the boostng model) may illuminate why linear models didn't do such a good job.
+
+```{r}
+x = df%>%dplyr::select(age,total_updrs)
+km.out=kmeans(x,6)
+km.out
+par(mfrow = c(1,2))
+renderPlot(plot(x,col=km.out$cluster,cex=2,main = "K means clustering", pch=1,lwd=2))
+renderPlot(plot(x,col=df$subject,cex=2,main = "Actual subject",pch=1,lwd=2))
+```
+
+K means clustering with 6 clusters shows that the lowest total updrs scores are associated with lower ages, while the highest scores are associated with the higher ages. However, there is a lot of vertical overlap in the clusters of the middle ages, which would make it more difficult for a linear model to deal with.
 
 Find relevant insights here:
 [Boosting for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/2e571834-aa7c-4ba9-887c-5239895d4692)
 [Updated boosting for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/4635b284-3125-4c14-85f4-1a06a2b4afa5)
 [Random forest for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/939f6c2e-6402-42bb-980a-7debf8507a62)
-
-
-
-### Comparison to Subset Selection for Parkinson's Severity
+[K means for total updrs and age](https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade)
 
 
 
@@ -150,3 +215,4 @@ Find relevant insights here:
 [PCA first attempt](https://data.world/tarrantrl/f-17-eda-project-4/insights/2c86b2d3-9787-401c-91f5-9533d4cbaac6)
 [Linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/fbe1f5d3-4b76-421c-8da7-8fd9b9b3bd65)
 [Non linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/ced4b656-b6ba-4c34-ba96-39ff79856e9c)
+[Boosting for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/ddd993c3-1fb8-441c-a3ec-3d543e566150)
