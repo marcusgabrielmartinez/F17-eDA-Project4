@@ -1,5 +1,3 @@
-library(ggplot2)
-require(dplyr)
 require(ISLR)
 require(boot)
 library(tidyverse)
@@ -7,7 +5,10 @@ library(modelr)
 require(MASS)
 library(leaps)
 library(glmnet)
+library(e1071)
 require(gbm)
+library(ggplot2)
+require(dplyr)
 require(data.world)
 project <- "https://data.world/tarrantrl/parkinsons-telemonitoring"
 data.world::set_config(cfg_env("DW_API"))
@@ -28,7 +29,6 @@ test = df[-train,]
 
 boost.df=gbm(age~.,data=df[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
 boost.df
-print(boost.df)
 summary(boost.df)
 
 # pca?
@@ -77,7 +77,53 @@ plot(hc.average)
 
 hc.cut=cutree(hc.complete,42)
 table(hc.cut,dfsubject$subject)
-hc.cut
-which
 table(hc.cut,km.out$cluster)
 
+
+### SVM
+# use boosting to see what predictors influence sex
+boost.df=gbm(sex2~.,data=df[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+boost.df
+summary(boost.df)
+#top influence on sex
+#jitter_abs       jitter_abs 21.5221489
+#test_time         test_time  9.1872555
+#jitter_rap       jitter_rap  7.8808474
+#dfa                     dfa  7.6766349
+x=subset(df, select = c(dfa, jitter_abs))
+x=matrix(unlist(x), ncol = 2)
+y=df$sex2
+dat=data.frame(x,y=as.factor(y))
+svmfit=svm(y~.,data=dat,type="nu-classification",kernel="linear",cost=10,scale=FALSE)
+print(svmfit)
+plot(svmfit,dat)
+
+make.grid=function(x,n=150){
+  grange=apply(x,2,range)
+  x1=seq(from=grange[1,1],to=grange[2,1],length=n)
+  x2=seq(from=grange[1,2],to=grange[2,2],length=n)
+  expand.grid(X1=x1,X2=x2)
+}
+xgrid=make.grid(x)
+ygrid=predict(svmfit,xgrid)
+
+beta=drop(t(svmfit$coefs)%*%x[svmfit$index,])
+beta0=svmfit$rho
+plot(xgrid,col=c("yellow","blue")[as.numeric(ygrid)],pch=20,cex=.2)
+points(x,col=y+3,pch=19)
+points(x[svmfit$index,],pch=5,cex=2)
+abline(beta0/beta[2],-beta[1]/beta[2])
+abline((beta0-1)/beta[2],-beta[1]/beta[2],lty=2)
+abline((beta0+1)/beta[2],-beta[1]/beta[2],lty=2)
+
+nlsvmfit=svm(factor(y)~.,data=dat,type="nu-classification",scale=TRUE,kernel="radial",cost=10)
+plot(nlsvmfit, dat)
+x1=seq(.5, .85, by=0.35/149.0)
+x2=seq(0, .0004, by=0.0004/149.0)
+xgrid=expand.grid(X1=x1,X2=x2)
+ygrid=predict(nlsvmfit,xgrid)
+func=predict(nlsvmfit,xgrid,decision.values=TRUE)
+func=attributes(func)$decision
+plot(xgrid,col=as.numeric(ygrid),pch=20,cex=.2)
+points(x,col=y+1,pch=19)
+contour(x1,x2,matrix(func,150,150),level=0,add=TRUE)
