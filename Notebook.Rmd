@@ -1,0 +1,152 @@
+---
+title: "Prediction of Parkinson's Disease"
+author: 'Group 2: Kelly Jennings, Stefanos Kapetanakis, Marcus Martinez, Rachel Tarrant, Changyong Yi'
+resource_files:
+- .Renviron
+output:
+  html_notebook:
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(modelr)
+require(dplyr)
+require(MASS)
+require(ISLR)
+require(ggplot2)
+library(leaps)
+library(glmnet)
+require(tree)
+require(randomForest)
+require(gbm)
+require(data.world)
+require(shiny)
+knitr::opts_chunk$set(echo = TRUE)
+```
+  
+## **R Session Info**  
+
+```{r}
+sessionInfo()
+```
+
+## **Github Link** 
+https://github.com/marcusgabrielmartinez/F17-eDA-Project4
+
+## **Data.World Link**
+https://data.world/tarrantrl/f-17-eda-project-4
+
+## **Connecting to data.world** 
+```{r}
+project <- "https://data.world/tarrantrl/parkinsons-telemonitoring"
+data.world::set_config(cfg_env("DW_API"))
+df <- data.world::query(
+  data.world::qry_sql("SELECT * FROM parkinsons_telemonitoring"),
+  dataset = project
+)
+```
+
+## Setup
+
+
+
+## **Introduction** 
+
+"This dataset is composed of a range of biomedical voice measurements from 42 people with early-stage Parkinson's disease recruited to a six-month trial of a telemonitoring device for remote symptom progression monitoring. The recordings were automatically captured in the patient's homes.
+
+Columns in the table contain subject number, subject age, subject gender, time interval from baseline recruitment date, motor UPDRS, total UPDRS, and 16 biomedical voice measures. Each row corresponds to one of 5,875 voice recording from these individuals. The main aim of the data is to predict the motor and total UPDRS scores ('motor_UPDRS' and 'total_UPDRS') from the 16 voice measures."
+
+
+subject# - Integer that uniquely identifies each subject 
+age - Subject age 
+sex - Subject gender '0' - male, '1' - female 
+test_time - Time since recruitment into the trial. The integer part is the number of days since recruitment. 
+motor_UPDRS - Clinician's motor UPDRS score, linearly interpolated 
+total_UPDRS - Clinician's total UPDRS score, linearly interpolated (UPDRS is stands for Unified Parkison's Disease Rating Scale and is used to rate the severity of Parkinson's)
+Jitter(%),Jitter(Abs),Jitter:RAP,Jitter:PPQ5,Jitter:DDP - Several measures of variation in fundamental frequency (fundamental frequency is the lowest frequency of a sound wave).
+Shimmer,Shimmer(dB),Shimmer:APQ3,Shimmer:APQ5,Shimmer:APQ11,Shimmer:DDA - Several measures of variation in amplitude 
+NHR,HNR - Two measures of ratio of noise to tonal components in the voice 
+RPDE - A nonlinear dynamical complexity measure 
+DFA - Signal fractal scaling exponent 
+PPE - A nonlinear measure of fundamental frequency variation
+
+This document will compare models based on the predictors chosen by best subset selection, forward selection, and backward selection. These models include Logistic Regression, Linear Discriminant Analysis, Quadratic Discriminant Analysis, and K-Nearest Neighbors.
+
+## Predicting Parkinson's Severity
+
+
+Find relevant insights here:
+[Boosting for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/2e571834-aa7c-4ba9-887c-5239895d4692)
+[Updated boosting for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/4635b284-3125-4c14-85f4-1a06a2b4afa5)
+[Random forest for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/939f6c2e-6402-42bb-980a-7debf8507a62)
+
+
+
+### Comparison to Subset Selection for Parkinson's Severity
+
+
+
+## Predicting Sex
+
+
+
+Find relevant insights here:
+[Boosing for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc)
+[Decision tree for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/b23e858d-45d1-4c2e-9022-ae4046360e50)
+[Random forest for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/a16305c3-ebf6-4d66-b1d7-1bb20731d641)
+[Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
+
+### Comparison to Subset Selection
+
+### Comparison to Shrinkage Methods
+
+#### Lasso
+
+
+### Logistic Regression
+
+
+### Linear Discriminant Analysis
+
+
+### Quadratic Discriminant Analysis
+
+
+### K-Nearest Neighbors
+
+
+## Predicting Age
+
+[Decision tree predicting age](https://data.world/tarrantrl/f-17-eda-project-4/insights/3f7ef916-3e2b-4cdc-93d1-e53ab8aa7c43)
+[Updated decision tree predicting age](https://data.world/tarrantrl/f-17-eda-project-4/insights/2b7c0f4e-f6f5-4571-8ed7-6cb160813a22)
+[Predicting age with boosting](https://data.world/tarrantrl/f-17-eda-project-4/insights/4142e8c0-817c-4332-a12e-356bfdbe8990)
+[Random forest for age](https://data.world/tarrantrl/f-17-eda-project-4/insights/319cb9ba-854d-4051-a405-7b9899767764)
+[Boosting for age](https://data.world/tarrantrl/f-17-eda-project-4/insights/20ec2b27-1732-4702-b923-a268529fa29a)
+[Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
+
+
+
+### Comparison to Project 3
+
+## Unsupervised Learning
+[K means for total updrs and age](https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade)
+[Hierarchical clustering](https://data.world/tarrantrl/f-17-eda-project-4/insights/dd034ffe-c196-43cc-a219-fa559ffd2bf1)
+[K means clustering for total updrs and subject](https://data.world/tarrantrl/f-17-eda-project-4/insights/5c848361-bac7-490c-b4b9-ba13b310e545)
+
+
+## Findings
+### Comparison to Project 3 Methods
+
+
+### Final Thoughts
+
+
+## Miscellaneous Insights
+[PCA first attempt](https://data.world/tarrantrl/f-17-eda-project-4/insights/2c86b2d3-9787-401c-91f5-9533d4cbaac6)
+[Linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/fbe1f5d3-4b76-421c-8da7-8fd9b9b3bd65)
+[Non linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/ced4b656-b6ba-4c34-ba96-39ff79856e9c)
