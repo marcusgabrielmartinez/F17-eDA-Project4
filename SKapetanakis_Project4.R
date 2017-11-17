@@ -69,15 +69,15 @@ train=sample(1:nrow(df_sex),2937)
 
 boost.df_sex=gbm(sex2~.,data=df_sex[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
 summary(boost.df_sex)
-plot(boost.df_sex,i="jitter_abs")
-plot(boost.df_sex,i="age")
+#plot(boost.df_sex,i="jitter_abs")
+#plot(boost.df_sex,i="age")
 
 n.trees=seq(from=100,to=10000,by=100)
 predmat=predict(boost.df_sex,newdata=df_sex[-train,],n.trees=n.trees)
 dim(predmat)
 berr=with(df_sex[-train,],apply( (predmat-sex2)^2,2,mean))
 plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error")
-#test.err=double(13)
+test.err=double(13)
 #abline(h=min(test.err),col="red")
 
 
@@ -135,7 +135,7 @@ plot(tree.status)
 text(tree.status,pretty=0)
 tree.status
 
-#Test/training for status tree.
+#Test/training for status tree
 set.seed(1011)
 
 train=sample(1:nrow(df_b1),97)
@@ -151,11 +151,36 @@ with(df_b1[-train,],table(tree.pred,status2))
 cv.status=cv.tree(tree.status,FUN=prune.tree)
 cv.status
 plot(cv.status) #lowest misclassification error rate at tree of size 
-prune.status=prune.tree(tree.status,best=6)
+prune.status=prune.tree(tree.status,best=2)
 plot(prune.status);text(prune.status,pretty=0)
 
 tree.pred=predict(prune.status,df_b1[-train,],type="class")
 with(df_b1[-train,],table(tree.pred,status2))
+
+
+### Random Forests
+
+#RF for status
+View(df_b1)
+
+set.seed(101)
+dim(df_b1)
+train=sample(1:nrow(df_b1),97)
+
+rf.status=randomForest(as.factor(status2)~.,data=df_b1,subset=train)
+rf.status
+
+oob.err=double(22)
+test.err=double(22)
+for(mtry in 1:22){
+  fit=randomForest(status2~.,data=df_b1,subset=train,mtry=mtry,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_b1[-train,])
+  test.err[mtry]=with(df_b1[-train,],mean((status2-pred)^2))
+  cat(mtry," ")
+}
+matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
 
 
 ### PCA
