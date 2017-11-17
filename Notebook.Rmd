@@ -157,32 +157,58 @@ Find relevant insights here:
 
 
 ## Predicting Sex
+We used boosting and random forests to predict sex, since our data predicted sex well in the previous project.
 
+### Boosting
+First, we used boosting to predict sex.
+```{r}
+boost.df_sex=gbm(sex2~.,data=df_sex[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+summary(boost.df_sex)
+```
+Boosting identifies jitter abs and age as the most important predictors.
 
+We then looked at the prediction error using boosting.
+```{r}
+n.trees=seq(from=100,to=10000,by=100)
+predmat=predict(boost.df_sex,newdata=df_sex[-train,],n.trees=n.trees)
+berr=with(df_sex[-train,],apply( (predmat-sex2)^2,2,mean))
+renderPlot(plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
+```
+The test error got very low, below 0.02, with the boosting model.
+
+### Random Forest
+We also used random forests to predict sex.
+```{r}
+rf.sex=randomForest(as.factor(sex2)~.-sex,data=df_sex,subset=train)
+rf.sex
+```
+The confusion matrix shows that this model does an overwhelmingly good job with mtry of 4.
+
+We looked at the out of bag and tesing error for mtry of 1 through 20, which 20 variables used at each split representing bagging.
+```{r}
+oob.err=double(20)
+test.err=double(20)
+for(mtry in 1:20){
+  fit=randomForest(sex2~.-sex,data=df_sex,subset=train,mtry=mtry,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_sex[-train,])
+  test.err[mtry]=with(df_sex[-train,],mean((sex2-pred)^2))
+  cat(mtry," ")
+}
+renderPlot(matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error"))
+renderPlot(legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue")))
+```
+Since the error reaches a minimum at mtry=20, this shows that bagging actually does a better job than random forests.
+
+### Comparison to K means
+
+### Comparison to Lasso
 
 Find relevant insights here:
 [Boosing for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc)
 [Decision tree for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/b23e858d-45d1-4c2e-9022-ae4046360e50)
 [Random forest for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/a16305c3-ebf6-4d66-b1d7-1bb20731d641)
 [Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
-
-### Comparison to Subset Selection
-
-### Comparison to Shrinkage Methods
-
-#### Lasso
-
-
-### Logistic Regression
-
-
-### Linear Discriminant Analysis
-
-
-### Quadratic Discriminant Analysis
-
-
-### K-Nearest Neighbors
 
 
 ## Predicting Age
