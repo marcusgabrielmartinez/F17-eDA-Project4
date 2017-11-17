@@ -53,7 +53,7 @@ df <- data.world::query(
 ```
 
 ## Setup
-We created several dataframes for our analyses. We created a binary version of the sex variable as well as a classification version of age (dividing into less than or equal to 65 and older than 65). We also removed subject from the dataframes we used for modeling because it is simily and id number. For predicting total updrs, we removed motor updrs because these are just different measurements of the same outcome variable; therefore, motor updrs is not a meaningful predictor of total updrs. We also created a training sample with indeces for half of the rows in the data.
+We created several dataframes for our analyses. We created a binary version of the sex variable as well as a classification version of age (dividing into less than or equal to 65 and older than 65). We also removed subject from the dataframes we used for modeling because it is simply an id number. For predicting total updrs, we removed motor updrs because these are just different measurements of the same outcome variable; therefore, motor updrs is not a meaningful predictor of total updrs. We also created a training sample with indeces for half of the rows in the data.
 ```{r}
 attach(df)
 
@@ -92,17 +92,18 @@ PPE - A nonlinear measure of fundamental frequency variation
 This document will use decision tree methods (including boosting, bagging, and random forests) to predict total updrs score, sex, and age. We will then compare these results to those found with the methods used in Project 3. We will also look at unsupervised learning methods to explore more about the dataset.
 
 ## Predicting Parkinson's Severity
-We used boosting and random forests to model and predict total updrs, a measure of Parkinson's severity.
+We used boosting and random forests to model and predict total updrs, a measure of Parkinson's severity. In order to make the interactive notebook’s loading time more reasonable (less than five minutes), we reduced the amount of trees in decision tree analyses in the notebook. These changes do not affect the overall results. For our original analyses with more trees, see associated insights.
+
 ### Boosting
 ```{r}
-boost.parkinsons=gbm(total_updrs~.,data=df_tot_nums[train,],distribution="gaussian",n.trees=2000,shrinkage=0.01,interaction.depth=4)
+boost.parkinsons=gbm(total_updrs~.,data=df_tot_nums[train,],distribution="gaussian",n.trees=1000,shrinkage=0.01,interaction.depth=4)
 summary(boost.parkinsons,plotit=FALSE)
 ```
 The boosting model shows that age is the most significant predictor in the model. After that, dfa, tes_time, binary sex status, and hnr, as well a few other variables contribute more than 1%.
 
 Next, we looked at the error from this model.
 ```{r}
-n.trees2=seq(from=100,to=2000,by=100)
+n.trees2=seq(from=100,to=1000,by=100)
 predmat=predict(boost.parkinsons,newdata=df_tot_nums[-train,],n.trees=n.trees2)
 dim(predmat)
 
@@ -128,8 +129,8 @@ dim(df_tot_nums)
 oob.err1=double(19)
 test.err1=double(19)
 for(mtry1 in 1:19){
-  fit=randomForest(total_updrs~.,data=df_tot_nums,subset=train,ntree=100)
-  oob.err1[mtry1]=fit$mse[100]
+  fit=randomForest(total_updrs~.,data=df_tot_nums,subset=train,ntree=50)
+  oob.err1[mtry1]=fit$mse[50]
   pred=predict(fit,df_tot_nums[-train,])
   test.err1[mtry1]=with(df_tot_nums[-train,],mean((total_updrs-pred)^2))
   cat(mtry1," ")
@@ -139,7 +140,7 @@ renderPlot({
   legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
 })
 ```
-Although this error seems to be jumping around quite a bit, it is important to note taht the y axis is only spaning 0.02. The dips in the error may be due to including correlated variables, of which there are a significant number. Boosting does a better job in this regard than random forests.
+Although this error seems to be jumping around quite a bit, it is important to note taht the y axis is only spanning 0.02. The dips in the error may be due to including correlated variables, of which there are a significant number. Boosting does a better job in this regard than random forests.
 
 ### Comparison to Subset Selection for Parkinson's Severity
 Boosting and random forests do a much better job of explaining variance in the total updrs, which is the main purpose of this dataset. Boosting also has good prediction accuracy in regards to this outcome.
@@ -157,10 +158,14 @@ renderPlot(plot(x_km6,col=df$subject,cex=2,main = "Actual subject",pch=1,lwd=2))
 K means clustering with 6 clusters shows that the lowest total updrs scores are associated with lower ages, while the highest scores are associated with the higher ages. However, there is a lot of vertical overlap in the clusters of the middle ages, which would make it more difficult for a linear model to deal with.
 
 Find relevant insights here:
+
 [Boosting for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/2e571834-aa7c-4ba9-887c-5239895d4692)
+
 [Updated boosting for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/4635b284-3125-4c14-85f4-1a06a2b4afa5)
+
 [Random forest for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/939f6c2e-6402-42bb-980a-7debf8507a62)
-[K means for total updrs and age](https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade)
+
+[K means clustering for total updrs and subject](https://data.world/tarrantrl/f-17-eda-project-4/insights/5c848361-bac7-490c-b4b9-ba13b310e545)
 
 
 
@@ -170,23 +175,23 @@ We used boosting and random forests to predict sex, since our data predicted sex
 ### Boosting
 First, we used boosting to predict sex.
 ```{r}
-##########error
 df_sex2 = df_sex%>%dplyr::select(-sex)
-boost.df_sex=gbm(sex2~.,data=df_sex2[train,],distribution="gaussian",n.trees=2000,shrinkage=0.01,interaction.depth=4)
+boost.df_sex=gbm(sex2~.,data=df_sex2[train,],distribution="gaussian",n.trees=1000,shrinkage=0.01,interaction.depth=4)
 summary(boost.df_sex, plotit=FALSE)
 ```
 Boosting identifies jitter abs and age as the most important predictors.
 
 We then looked at the prediction error using boosting.
 ```{r}
-n.trees3=seq(from=100,to=2000,by=100)
+n.trees3=seq(from=100,to=1000,by=100)
 predmat=predict(boost.df_sex,newdata=df_sex[-train,],n.trees=n.trees3)
 berr=with(df_sex[-train,],apply( (predmat-sex2)^2,2,mean))
 renderPlot(plot(n.trees3,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
 ```
-The test error got very low, below 0.02, with the boosting model.
+The test error got very low, around 0.1, with the boosting model.
 
 Find relevant insights here:
+
 [Boosting for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc)
 
 ### Random Forest
@@ -197,13 +202,13 @@ rf.sex
 ```
 The confusion matrix shows that this model does an overwhelmingly good job with mtry of 4.
 
-We looked at the out of bag and tesing error for mtry of 1 through 20, which 20 variables used at each split representing bagging.
+We looked at the out of bag and testing error for mtry of 1 through 20, which 20 variables used at each split representing bagging.
 ```{r}
 oob.err2=double(20)
 test.err2=double(20)
 for(mtry2 in 1:20){
-  fit=randomForest(sex2~.-sex,data=df_sex,subset=train,mtry=mtry2,ntree=100)
-  oob.err2[mtry2]=fit$mse[100]
+  fit=randomForest(sex2~.-sex,data=df_sex,subset=train,mtry=mtry2,ntree=50)
+  oob.err2[mtry2]=fit$mse[50]
   pred=predict(fit,df_sex[-train,])
   test.err2[mtry2]=with(df_sex[-train,],mean((sex2-pred)^2))
   cat(mtry2," ")
@@ -216,8 +221,11 @@ renderPlot({
 Since the error reaches a minimum at mtry=20, this shows that bagging actually does a better job than random forests.
 
 Find relevant insights here:
+
 [Decision tree for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/b23e858d-45d1-4c2e-9022-ae4046360e50)
+
 [Random forest for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/a16305c3-ebf6-4d66-b1d7-1bb20731d641)
+
 [Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
 
 ### Comparison to KNN
@@ -275,26 +283,29 @@ renderPlot(
   plot(nlsvmfit, dat)
 )
 ```
-This decision boundary is able to classify better than the linear one due to its ability to curve around the center to capture male points in the center of the boundary and female points in the outside red area of the boundary. The abnormal shape also juts out in places to capture points that a circular shape might not have included. Overall, this is probably close to the best decision boundary that SVM can create on this data. No shape would be able to correctlly classify all of the overlapping points towards the center.
+This decision boundary is able to classify better than the linear one due to its ability to curve around the center to capture male points in the center of the boundary and female points in the outside pink area of the boundary. The abnormal shape also juts out in places to capture points that the previous shape might not have included. Overall, this is probably close to the best decision boundary that SVM can create on this data. No shape would be able to correctlly classify all of the overlapping points towards the center.
 
 Find relevant insights here:
+
 [Linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/fbe1f5d3-4b76-421c-8da7-8fd9b9b3bd65)
+
 [Non linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/ced4b656-b6ba-4c34-ba96-39ff79856e9c)
 
 
 ## Predicting Age
 Although we didn't look into predicting age as much in the previous project, we were able to explore it more in this project using boosting and random forests.
+
 ### Boosting
-First, we made a boosting model to predict age as a classification problem, dividing age into younger than or equal to 65 (designated 1) and older 65 (designated 0).
+First, we made a boosting model to predict age as a classification problem, dividing age into younger than or equal to 65 (designated 1) and older than 65 (designated 0).
 ```{r}
-boost.age=gbm(age2~.-age,data=df_age[train,],distribution="gaussian",n.trees=2000,shrinkage=0.01,interaction.depth=4)
+boost.age=gbm(age2~.-age,data=df_age[train,],distribution="gaussian",n.trees=1000,shrinkage=0.01,interaction.depth=4)
 summary(boost.age,plotit=FALSE)
 ```
 Total and motor updrs both played a significant role in predicting sex, which makes sense because Parkinson's worsens with age.
 
 We then looked at the testing error for the boosting model.
 ```{r}
-n.trees5=seq(from=100,to=2000,by=100)
+n.trees5=seq(from=100,to=1000,by=100)
 predmat=predict(boost.age,newdata=df_age[-train,],n.trees=n.trees5)
 
 berr=with(df_age[-train,],apply( (predmat-age2)^2,2,mean))
@@ -303,7 +314,7 @@ renderPlot({
   abline(h=min(berr),col="red")
 })
 ```
-The error continues to decrease as the model uses more and more trees and is less than 0.06, demonstrating the predictive strength of this model.
+The error continues to decrease as the model uses more and more trees and is around 0.1, demonstrating the predictive strength of this model.
 
 ### Random Forests
 Next, we used a random forest model to classify age.
@@ -317,8 +328,8 @@ We then looked at the out of bag and testing error, using mtry of 1 to 20.
 oob.err3=double(20)
 test.err3=double(20)
 for(mtry3 in 1:20){
-  fit=randomForest(age2~.-age,data=df_age,subset=train,mtry=mtry3,ntree=100)
-  oob.err3[mtry3]=fit$mse[100]
+  fit=randomForest(age2~.-age,data=df_age,subset=train,mtry=mtry3,ntree=50)
+  oob.err3[mtry3]=fit$mse[50]
   pred=predict(fit,df_age[-train,])
   test.err3[mtry3]=with(df_age[-train,],mean((age2-pred)^2))
   cat(mtry3," ")
@@ -328,15 +339,21 @@ renderPlot({
   legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
 })
 ```
-As with predicting sex using random forests, this graph shows that regular bagging actually does a better job than the random forest models. Again, this model has error less than 0.06 like boosting. The out of bag error closely predicts the testing error as well. Both of these models predict age classification with great accuracy.
+As with predicting sex using random forests, this graph shows that regular bagging actually does a better job than the random forest models. Again, this model has an error rate less than 0.06 like boosting. The out of bag error closely predicts the testing error as well. Both of these models predict age classification with great accuracy.
 
 
 For relevent insights, see:
+
 [Decision tree predicting age](https://data.world/tarrantrl/f-17-eda-project-4/insights/3f7ef916-3e2b-4cdc-93d1-e53ab8aa7c43)
+
 [Updated decision tree predicting age](https://data.world/tarrantrl/f-17-eda-project-4/insights/2b7c0f4e-f6f5-4571-8ed7-6cb160813a22)
+
 [Predicting age with boosting](https://data.world/tarrantrl/f-17-eda-project-4/insights/4142e8c0-817c-4332-a12e-356bfdbe8990)
+
 [Random forest for age](https://data.world/tarrantrl/f-17-eda-project-4/insights/319cb9ba-854d-4051-a405-7b9899767764)
+
 [Boosting for age](https://data.world/tarrantrl/f-17-eda-project-4/insights/20ec2b27-1732-4702-b923-a268529fa29a)
+
 [Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
 
 
@@ -375,26 +392,31 @@ table(hc.cut,df$subject)
 ```
 Since the matrix is mostly zeros, this shows that hierarchical clustering was able to cluster well in regards to true subject. The results are similar to those found with k means.
 
-The fact that the data can ultimately be traced back pretty easily to sujbect may have an effect on our analyses. Although we removed subject from our other models, a lack of variation within the data points for each subject may be why we had some trouble predicting total updrs in the last project. For example, age does not predict updrs score for one subject because that subject's age did not change. Perhaps it would be beneficial to take into accound test time and create a floating point age that takes into account the passage of time within each subject's data.
+The fact that the data can ultimately be traced back pretty easily to subject may have an effect on our analyses. Although we removed subject from our other models, a lack of variation within the data points for each subject may be why we had some trouble predicting total updrs in the last project. For example, age does not predict updrs score for one subject because that subject's age did not change. Perhaps it would be beneficial to take into account test time and create a floating point age that takes into account the passage of time within each subject's data.
 
 Find relevant insights here:
+
 [K means for total updrs and age](https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade)
+
 [Hierarchical clustering](https://data.world/tarrantrl/f-17-eda-project-4/insights/dd034ffe-c196-43cc-a219-fa559ffd2bf1)
-[K means clustering for total updrs and subject](https://data.world/tarrantrl/f-17-eda-project-4/insights/5c848361-bac7-490c-b4b9-ba13b310e545)
+
 
 
 ## Findings
 
 Overall, decision trees and related methods had greater predictive power and accuracy than the models we used in Project 3. Particularly for total updrs, boosting and random forests made prediction feasible when it did not seem possible with linear models found in subset selection. This is extremely encouraging because total updrs is the most medically relevant outcome to predict. Additionally, due to the interpretability of decision trees, simpler decision trees could be of use to doctors in diagnosing the early disease.
 
-Unsupervised learning methods using clustering demonstrated some characteristics about our data that help to explain why linear models and simpler classification schemes did not always fair well. Due to a lack of variation in the data, particularly regarding each subject, there is a lot of overlap between data points that makes trends obscure. K means clustering helped to visualize some of these trends in a different way, and boosting and bagging were able to predict these trends as well.
+Unsupervised learning methods using clustering demonstrated some characteristics about our data that help to explain why linear models and simpler classification schemes did not always fare well. Due to a lack of variation in the data, particularly regarding each subject, there is a lot of overlap between data points that makes trends obscure. K means clustering helped to visualize some of these trends in a different way, and boosting and bagging were able to predict these trends as well.
 
 
 ## Miscellaneous Insights
 
 [PCA first attempt](https://data.world/tarrantrl/f-17-eda-project-4/insights/2c86b2d3-9787-401c-91f5-9533d4cbaac6)
+
 [Boosting for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/ddd993c3-1fb8-441c-a3ec-3d543e566150)
+
 [Random Forests for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/4433b10d-c137-488d-92e4-ffcc3b71a0fc)
+
 [Decision Tree Predicting Status](https://data.world/tarrantrl/f-17-eda-project-4/insights/a405b6a8-0df4-40b1-9ff6-4051102ff011)
 
 
