@@ -26,6 +26,7 @@ require(randomForest)
 require(gbm)
 require(data.world)
 require(shiny)
+require(e1071)
 knitr::opts_chunk$set(echo = TRUE)
 ```
   
@@ -203,6 +204,9 @@ Since the error reaches a minimum at mtry=20, this shows that bagging actually d
 ### Comparison to K means
 
 ### Comparison to Lasso
+In our last project (Project 3) we used lasso to analyze the data and find the best predictors for predicting sex. We found that there were 14 predictors with the highest coefficients were age, test_time, motor_updrs, total_updrs, jitter, jitter_abs, jitter_rap, shimmer_apq3, shimmer_dda, nhr, hnr, rpde, dfa, and ppe. In our boosting analysis we found the top 14 predictors for sex with the highest relative influence in descending order were jitter_abs, age, jitter_ddp, motor_updrs, nhr, jitter_rap, dfa, jitter, hnr, total_updrs, shimmer_apq11, test_time, shimmer_apq5, and rpde. This boosting analysis didn't include shimmer_apq3, shimmer_dda, and ppe yet they were listed as good predictors in our Lasso analysis.
+
+
 
 Find relevant insights here:
 [Boosing for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc)
@@ -242,3 +246,5 @@ Find relevant insights here:
 [Linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/fbe1f5d3-4b76-421c-8da7-8fd9b9b3bd65)
 [Non linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/ced4b656-b6ba-4c34-ba96-39ff79856e9c)
 [Boosting for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/ddd993c3-1fb8-441c-a3ec-3d543e566150)
+[Random Forests for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/4433b10d-c137-488d-92e4-ffcc3b71a0fc)
+[Decision Tree Predicting Status](https://data.world/tarrantrl/f-17-eda-project-4/insights/a405b6a8-0df4-40b1-9ff6-4051102ff011)
