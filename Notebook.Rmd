@@ -63,6 +63,10 @@ df_sex <- df %>% dplyr::select(., -subject) %>% dplyr::mutate(sex2 = ifelse(sex 
 
 df_tot_nums = df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::select(-sex,-subject,-motor_updrs)
 
+df2 = dplyr::select(df, -subject)
+df2 <- df2 %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0))
+df2 = dplyr::select(df2, -sex)
+
 train=sample(1:nrow(df_tot_nums),2937)
 ```
 ## **Introduction** 
@@ -158,7 +162,7 @@ Find relevant insights here:
 
 
 ## Predicting Sex
-We used boosting and random forests to predict sex, since our data predicted sex well in the previous project.
+We used boosting and random forests to predict sex, since our data predicted sex well in the previous project. We also used linear and nonlinear support vector machines to classify data by sex.
 
 ### Boosting
 First, we used boosting to predict sex.
@@ -206,14 +210,73 @@ Since the error reaches a minimum at mtry=20, this shows that bagging actually d
 ### Comparison to Lasso
 In our last project (Project 3) we used lasso to analyze the data and find the best predictors for predicting sex. We found that there were 14 predictors with the highest coefficients were age, test_time, motor_updrs, total_updrs, jitter, jitter_abs, jitter_rap, shimmer_apq3, shimmer_dda, nhr, hnr, rpde, dfa, and ppe. In our boosting analysis we found the top 14 predictors for sex with the highest relative influence in descending order were jitter_abs, age, jitter_ddp, motor_updrs, nhr, jitter_rap, dfa, jitter, hnr, total_updrs, shimmer_apq11, test_time, shimmer_apq5, and rpde. This boosting analysis didn't include shimmer_apq3, shimmer_dda, and ppe yet they were listed as good predictors in our Lasso analysis.
 
+### Linear SVM
+After using boosting to decide which predictors influence sex the most, we decided to choose the plot of jitter_abs vs dfa to classify by sex using SVM. We first created the model:
+```{r}
+x=subset(df2, select = c(dfa, jitter_abs))
+x=matrix(unlist(x), ncol = 2)
+y=df2$sex2
+dat=data.frame(x,y=as.factor(y))
+svmfit=svm(y~.,data=dat,type="nu-classification",kernel="linear",cost=10,scale=FALSE)
+print(svmfit)
+#plot(svmfit,dat)
+```
+Then we created the plot of jitter_abs vs dfa and added the decision boundary with margins and the support points.
+```{r}
+make.grid=function(x,n=150){
+  grange=apply(x,2,range)
+  x1=seq(from=grange[1,1],to=grange[2,1],length=n)
+  x2=seq(from=grange[1,2],to=grange[2,2],length=n)
+  expand.grid(X1=x1,X2=x2)
+}
+xgrid=make.grid(x)
+ygrid=predict(svmfit,xgrid)
 
+beta=drop(t(svmfit$coefs)%*%x[svmfit$index,])
+beta0=svmfit$rho
+renderPlot({
+  plot(xgrid,col=c("yellow","blue")[as.numeric(ygrid)],pch=20,cex=.2)
+  points(x,col=y+3,pch=19)
+  points(x[svmfit$index,],pch=5,cex=2)
+  abline(beta0/beta[2],-beta[1]/beta[2])
+  abline((beta0-1)/beta[2],-beta[1]/beta[2],lty=2)
+  abline((beta0+1)/beta[2],-beta[1]/beta[2],lty=2)
+})
+```
+The linear SVM seemed to split the male and female points at an appropriate decision boundary. You can see that a large group of female points are to the left of the boundary and a large amount of male points are to the right. However, the margins are very small due to the data being so close together. Many of the male and female points overlap, so a linear SVM was not a good choice for this data. 
+
+### Nonlinear SVM
+Now we try classifying by sex for the same plot of jitter_abs vs dfa, except this time we are using a nonlinear type SVM with a radial kernel.
+```{r}
+x=subset(df2, select = c(dfa, jitter_abs))
+x=matrix(unlist(x), ncol = 2)
+y=df2$sex2
+nlsvmfit=svm(factor(y)~.,data=dat,type="nu-classification",scale=TRUE,kernel="radial",cost=10)
+#plot(nlsvmfit, dat)
+```
+Now we plot the new SVM nonlinear decision boundary:
+```{r}
+x1=seq(.5, .85, by=0.35/149.0)
+x2=seq(0, .0004, by=0.0004/149.0)
+xgrid=expand.grid(X1=x1,X2=x2)
+ygrid=predict(nlsvmfit,xgrid)
+func=predict(nlsvmfit,xgrid,decision.values=TRUE)
+func=attributes(func)$decision
+renderPlot({
+  plot(xgrid,col=as.numeric(ygrid),pch=20,cex=.2)
+  points(x,col=y+1,pch=19)
+  contour(x1,x2,matrix(func,150,150),level=0,add=TRUE)
+})
+```
+This decision boundary is able to classify better than the linear one due to its ability to curve around the center to capture male points in the center of the boundary and female points in the outside red area of the boundary. The abnormal shape also juts out in places to capture points that a circular shape might not have included. Overall, this is probably close to the best decision boundary that SVM can create on this data. No shape would be able to correctlyl classify all of the overlapping points towards the center.
 
 Find relevant insights here:
-[Boosing for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc)
+[Boosting for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc)
 [Decision tree for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/b23e858d-45d1-4c2e-9022-ae4046360e50)
 [Random forest for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/a16305c3-ebf6-4d66-b1d7-1bb20731d641)
 [Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
-
+[Linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/fbe1f5d3-4b76-421c-8da7-8fd9b9b3bd65)
+[Non linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/ced4b656-b6ba-4c34-ba96-39ff79856e9c)
 
 ## Predicting Age
 
@@ -229,6 +292,11 @@ Find relevant insights here:
 ### Comparison to Project 3
 
 ## Unsupervised Learning
+
+### k-means Clustering
+
+### Hierchical Clustering
+
 [K means for total updrs and age](https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade)
 [Hierarchical clustering](https://data.world/tarrantrl/f-17-eda-project-4/insights/dd034ffe-c196-43cc-a219-fa559ffd2bf1)
 [K means clustering for total updrs and subject](https://data.world/tarrantrl/f-17-eda-project-4/insights/5c848361-bac7-490c-b4b9-ba13b310e545)
@@ -243,8 +311,6 @@ Find relevant insights here:
 
 ## Miscellaneous Insights
 [PCA first attempt](https://data.world/tarrantrl/f-17-eda-project-4/insights/2c86b2d3-9787-401c-91f5-9533d4cbaac6)
-[Linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/fbe1f5d3-4b76-421c-8da7-8fd9b9b3bd65)
-[Non linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/ced4b656-b6ba-4c34-ba96-39ff79856e9c)
 [Boosting for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/ddd993c3-1fb8-441c-a3ec-3d543e566150)
 [Random Forests for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/4433b10d-c137-488d-92e4-ffcc3b71a0fc)
 [Decision Tree Predicting Status](https://data.world/tarrantrl/f-17-eda-project-4/insights/a405b6a8-0df4-40b1-9ff6-4051102ff011)

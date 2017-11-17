@@ -5,8 +5,10 @@ library(modelr)
 require(MASS)
 library(leaps)
 library(glmnet)
+#
 library(e1071)
 require(gbm)
+#
 library(ggplot2)
 require(dplyr)
 require(data.world)
@@ -19,52 +21,47 @@ df <- data.world::query(
 
 # boosting
 ###########
-df = dplyr::select(df, -subject)
-df <- df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0))
-df = dplyr::select(df, -sex)
-#attach(df)
+df2 = dplyr::select(df, -subject)
+df2 <- df2 %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0))
+df2 = dplyr::select(df2, -sex)
 set.seed(1)
-train = sample(nrow(df), 97)
-test = df[-train,]
+train = sample(nrow(df2), 97)
+test = df2[-train,]
 
-boost.df=gbm(age~.,data=df[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
-boost.df
-summary(boost.df)
+boost.df2=gbm(age~.,data=df2[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+boost.df2
+summary(boost.df2)
 
 # pca?
-dimnames(df)
-apply(df,2,mean)
-apply(df,2, var)
-pca.out=prcomp(df, scale=TRUE)
+dimnames(df2)
+apply(df2,2,mean)
+apply(df2,2, var)
+pca.out=prcomp(df2, scale=TRUE)
 pca.out
 names(pca.out)
 biplot(pca.out, scale=0)
 
-dfsubject <- data.world::query(
-  data.world::qry_sql("SELECT * FROM parkinsons_telemonitoring"),
-  dataset = project
-)
 # k means
-x = dfsubject%>%dplyr::select(age, total_updrs)
+x = df%>%dplyr::select(age, total_updrs)
 km.out=kmeans(x,42)
 km.out
 par(mfrow = c(1, 2))
 plot(x,col=km.out$cluster,cex=2,main = "K means clustering", pch=1,lwd=2)
-plot(x,col=dfsubject$subject,cex=2,main = "Actual subject",pch=1,lwd=2)
+plot(x,col=df$subject,cex=2,main = "Actual subject",pch=1,lwd=2)
 # ggplot alternative:
 km.out$cluster
 dfcluster <- data.frame(x, km.out$cluster)
 names(dfcluster)
-dfcluster2 <- dplyr::bind_cols(dfcluster, data.frame(dfsubject$subject))
+dfcluster2 <- dplyr::bind_cols(dfcluster, data.frame(df$subject))
 
 kmeansubject <- dfcluster2 %>% ggplot(aes(x=age, y=total_updrs, colour = as.factor(km.out.cluster))) + geom_point()
-actualsubject <- dfcluster2 %>% ggplot(aes(x=age, y=total_updrs, colour = as.factor(dfsubject.subject))) + geom_point()
+actualsubject <- dfcluster2 %>% ggplot(aes(x=age, y=total_updrs, colour = as.factor(df.subject))) + geom_point()
 
 df1 <- data.frame(km.out$centers, km.out$size)
 names(df1)
 dfcluster2 %>% ggplot() + geom_point(mapping = aes(x=age, y=total_updrs, colour = as.factor(km.out.cluster))) + geom_point(data=df1, mapping=aes(age, total_updrs, size=km.out.size))
 
-df %>% ggplot(aes(x=age, y = total_updrs, colour = sex2)) + geom_point()
+df2 %>% ggplot(aes(x=age, y = total_updrs, colour = sex2)) + geom_point()
 
 # hierchical 
 hc.complete=hclust(dist(x),method="complete")
@@ -76,23 +73,18 @@ plot(hc.single)
 plot(hc.average)
 
 hc.cut=cutree(hc.complete,42)
-table(hc.cut,dfsubject$subject)
+table(hc.cut,df$subject)
 table(hc.cut,km.out$cluster)
 
 
 ### SVM
 # use boosting to see what predictors influence sex
-boost.df=gbm(sex2~.,data=df[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+boost.df=gbm(sex2~.,data=df2[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
 boost.df
 summary(boost.df)
-#top influence on sex
-#jitter_abs       jitter_abs 21.5221489
-#test_time         test_time  9.1872555
-#jitter_rap       jitter_rap  7.8808474
-#dfa                     dfa  7.6766349
-x=subset(df, select = c(dfa, jitter_abs))
+x=subset(df2, select = c(dfa, jitter_abs))
 x=matrix(unlist(x), ncol = 2)
-y=df$sex2
+y=df2$sex2
 dat=data.frame(x,y=as.factor(y))
 svmfit=svm(y~.,data=dat,type="nu-classification",kernel="linear",cost=10,scale=FALSE)
 print(svmfit)
