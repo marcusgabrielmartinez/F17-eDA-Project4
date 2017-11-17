@@ -181,6 +181,9 @@ renderPlot(plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",ma
 ```
 The test error got very low, below 0.02, with the boosting model.
 
+Find relevant insights here:
+[Boosting for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc)
+
 ### Random Forest
 We also used random forests to predict sex.
 ```{r}
@@ -205,10 +208,16 @@ renderPlot(legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue")))
 ```
 Since the error reaches a minimum at mtry=20, this shows that bagging actually does a better job than random forests.
 
-### Comparison to K means
+Find relevant insights here:
+[Decision tree for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/b23e858d-45d1-4c2e-9022-ae4046360e50)
+[Random forest for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/a16305c3-ebf6-4d66-b1d7-1bb20731d641)
+[Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
+
+### Comparison to KNN
+The prediction accuracy of K nearest neighbors, which was the best model in our previous project, was 0.94. Here, the error of boosting is less than 0.02, corresponding to a prediction accuracy of 0.98. Both of these models do well, but boosting wins out by a small margin. Bagging, with a test error below 0.06, also does better than KNN. This affirms the ability of both random forests and boosting to improve the prediction accuracy of decision trees to be a powerful model.
 
 ### Comparison to Lasso
-In our last project (Project 3) we used lasso to analyze the data and find the best predictors for predicting sex. We found that there were 14 predictors with the highest coefficients were age, test_time, motor_updrs, total_updrs, jitter, jitter_abs, jitter_rap, shimmer_apq3, shimmer_dda, nhr, hnr, rpde, dfa, and ppe. In our boosting analysis we found the top 14 predictors for sex with the highest relative influence in descending order were jitter_abs, age, jitter_ddp, motor_updrs, nhr, jitter_rap, dfa, jitter, hnr, total_updrs, shimmer_apq11, test_time, shimmer_apq5, and rpde. This boosting analysis didn't include shimmer_apq3, shimmer_dda, and ppe yet they were listed as good predictors in our Lasso analysis.
+In our last project, we used lasso to analyze the data and find the best predictors for predicting sex. We found that the 14 predictors with the highest coefficients were age, test_time, motor_updrs, total_updrs, jitter, jitter_abs, jitter_rap, shimmer_apq3, shimmer_dda, nhr, hnr, rpde, dfa, and ppe. In our boosting analysis, we found the top 14 predictors for sex with the highest relative influence in descending order were jitter_abs, age, jitter_ddp, motor_updrs, nhr, jitter_rap, dfa, jitter, hnr, total_updrs, shimmer_apq11, test_time, shimmer_apq5, and rpde. This boosting analysis didn't include shimmer_apq3, shimmer_dda, and ppe, choosing jitter_ddp, shimmer_apq11, and shimmer_apq5 instead. On the whole, however, these two methods chose similar predictors, confirming the overall importance of those 11 common predictors.
 
 ### Linear SVM
 After using boosting to decide which predictors influence sex the most, we decided to choose the plot of jitter_abs vs dfa to classify by sex using SVM. We first created the model:
@@ -243,10 +252,10 @@ renderPlot({
   abline((beta0+1)/beta[2],-beta[1]/beta[2],lty=2)
 })
 ```
-The linear SVM seemed to split the male and female points at an appropriate decision boundary. You can see that a large group of female points are to the left of the boundary and a large amount of male points are to the right. However, the margins are very small due to the data being so close together. Many of the male and female points overlap, so a linear SVM was not a good choice for this data. 
+The linear SVM seemed to split the male and female points at an appropriate decision boundary. A large group of female points are to the left of the boundary and a large amount of male points are to the right. However, the margins are very small due to the data being so close together. Many of the male and female points overlap, so a linear SVM was not a good choice for this data. 
 
 ### Nonlinear SVM
-Now we try classifying by sex for the same plot of jitter_abs vs dfa, except this time we are using a nonlinear type SVM with a radial kernel.
+Next we tried classifying by sex for the same plot of jitter_abs vs dfa, except this time we used a nonlinear type SVM with a radial kernel.
 ```{r}
 x=subset(df2, select = c(dfa, jitter_abs))
 x=matrix(unlist(x), ncol = 2)
@@ -254,7 +263,7 @@ y=df2$sex2
 nlsvmfit=svm(factor(y)~.,data=dat,type="nu-classification",scale=TRUE,kernel="radial",cost=10)
 #plot(nlsvmfit, dat)
 ```
-Now we plot the new SVM nonlinear decision boundary:
+Then we plotted the new SVM nonlinear decision boundary:
 ```{r}
 x1=seq(.5, .85, by=0.35/149.0)
 x2=seq(0, .0004, by=0.0004/149.0)
@@ -268,18 +277,59 @@ renderPlot({
   contour(x1,x2,matrix(func,150,150),level=0,add=TRUE)
 })
 ```
-This decision boundary is able to classify better than the linear one due to its ability to curve around the center to capture male points in the center of the boundary and female points in the outside red area of the boundary. The abnormal shape also juts out in places to capture points that a circular shape might not have included. Overall, this is probably close to the best decision boundary that SVM can create on this data. No shape would be able to correctlyl classify all of the overlapping points towards the center.
+This decision boundary is able to classify better than the linear one due to its ability to curve around the center to capture male points in the center of the boundary and female points in the outside red area of the boundary. The abnormal shape also juts out in places to capture points that a circular shape might not have included. Overall, this is probably close to the best decision boundary that SVM can create on this data. No shape would be able to correctlly classify all of the overlapping points towards the center.
 
 Find relevant insights here:
-[Boosting for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc)
-[Decision tree for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/b23e858d-45d1-4c2e-9022-ae4046360e50)
-[Random forest for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/a16305c3-ebf6-4d66-b1d7-1bb20731d641)
-[Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
 [Linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/fbe1f5d3-4b76-421c-8da7-8fd9b9b3bd65)
 [Non linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/ced4b656-b6ba-4c34-ba96-39ff79856e9c)
 
-## Predicting Age
 
+## Predicting Age
+Although we didn't look into predicting age as much in the previous project, we were able to explore it more in this project using boosting and random forests.
+### Boosting
+First, we made a boosting model to predict age as a classification problem, dividing age into younger than or equal to 65 (designated 1) and older 65 (designated 0).
+```{r}
+boost.age=gbm(age2~.-age,data=df_age[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+summary(boost.age,plotit=FALSE)
+```
+Total and motor updrs both played a significant role in predicting sex, which makes sense because Parkinson's worsens with age.
+
+We then looked at the testing error for the boosting model.
+```{r}
+n.trees=seq(from=100,to=10000,by=100)
+predmat=predict(boost.age,newdata=df_age[-train,],n.trees=n.trees)
+
+berr=with(df_age[-train,],apply( (predmat-age2)^2,2,mean))
+renderPlot(plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
+renderPlot(abline(h=min(test.err),col="red"))
+```
+The error continues to decrease as the model uses more and more trees and is less than 0.06, demonstrating the predictive strength of this model.
+
+### Random Forests
+Next, we used a random forest model to classify age.
+```{r}
+rf.age=randomForest(as.factor(age2)~.-age,data=df_age,subset=train)
+rf.age
+```
+Less than 10% of the training data is misclassified, which is pretty good.
+We then looked at the out of bag and testing error, using mtry of 1 to 20.
+```{r}
+oob.err=double(20)
+test.err=double(20)
+for(mtry in 1:20){
+  fit=randomForest(age2~.-age,data=df_age,subset=train,mtry=mtry,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_age[-train,])
+  test.err[mtry]=with(df_age[-train,],mean((age2-pred)^2))
+  cat(mtry," ")
+}
+matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
+```
+As with predicting sex using random forests, this graph shows that regular bagging actually does a better job than the random forest models. Again, this model has error less than 0.06 like boosting. The out of bag error closely predicts the testing error as well. Both of these models predict age classification with great accuracy.
+
+
+For relevent insights, see:
 [Decision tree predicting age](https://data.world/tarrantrl/f-17-eda-project-4/insights/3f7ef916-3e2b-4cdc-93d1-e53ab8aa7c43)
 [Updated decision tree predicting age](https://data.world/tarrantrl/f-17-eda-project-4/insights/2b7c0f4e-f6f5-4571-8ed7-6cb160813a22)
 [Predicting age with boosting](https://data.world/tarrantrl/f-17-eda-project-4/insights/4142e8c0-817c-4332-a12e-356bfdbe8990)

@@ -309,6 +309,26 @@ df &lt;- data.world::query(
 </div>
 <div id="section-setup" class="section level2">
 <h2>Setup</h2>
+<p>We created several dataframes for our analyses.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYXR0YWNoKGRmKVxuXG5kZl9hZ2UgPC0gZGYgJT4lIGRwbHlyOjpzZWxlY3QoLiwgLXN1YmplY3QpICU+JSBkcGx5cjo6bXV0YXRlKGFnZTIgPSBpZmVsc2UoYWdlIDw9IDY1LCAxLCAwKSkgJT4lIGRwbHlyOjptdXRhdGUoc2V4ID0gYXMuZmFjdG9yKHNleCkpXG5cbmRmX3NleCA8LSBkZiAlPiUgZHBseXI6OnNlbGVjdCguLCAtc3ViamVjdCkgJT4lIGRwbHlyOjptdXRhdGUoc2V4MiA9IGlmZWxzZShzZXggPT0gXCJ0cnVlXCIsIDEsIDApKSAlPiUgZHBseXI6Om11dGF0ZShhZ2UgPSBhcy5mYWN0b3IoYWdlKSlcblxuZGZfdG90X251bXMgPSBkZiAlPiUgZHBseXI6Om11dGF0ZShzZXgyID0gaWZlbHNlKHNleCA9PSBcInRydWVcIiwgMSwgMCkpICU+JSBkcGx5cjo6c2VsZWN0KC1zZXgsLXN1YmplY3QsLW1vdG9yX3VwZHJzKVxuXG5kZjIgPSBkcGx5cjo6c2VsZWN0KGRmLCAtc3ViamVjdClcbmRmMiA8LSBkZjIgJT4lIGRwbHlyOjptdXRhdGUoc2V4MiA9IGlmZWxzZShzZXggPT0gXCJ0cnVlXCIsIDEsIDApKVxuZGYyID0gZHBseXI6OnNlbGVjdChkZjIsIC1zZXgpXG5cbnRyYWluPXNhbXBsZSgxOm5yb3coZGZfdG90X251bXMpLDI5MzcpXG5gYGAifQ== -->
+<pre class="r"><code>attach(df)
+
+df_age &lt;- df %&gt;% dplyr::select(., -subject) %&gt;% dplyr::mutate(age2 = ifelse(age &lt;= 65, 1, 0)) %&gt;% dplyr::mutate(sex = as.factor(sex))
+
+df_sex &lt;- df %&gt;% dplyr::select(., -subject) %&gt;% dplyr::mutate(sex2 = ifelse(sex == &quot;true&quot;, 1, 0)) %&gt;% dplyr::mutate(age = as.factor(age))
+
+df_tot_nums = df %&gt;% dplyr::mutate(sex2 = ifelse(sex == &quot;true&quot;, 1, 0)) %&gt;% dplyr::select(-sex,-subject,-motor_updrs)
+
+df2 = dplyr::select(df, -subject)
+df2 &lt;- df2 %&gt;% dplyr::mutate(sex2 = ifelse(sex == &quot;true&quot;, 1, 0))
+df2 = dplyr::select(df2, -sex)
+
+train=sample(1:nrow(df_tot_nums),2937)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
 </div>
 <div id="section-introduction" class="section level2">
 <h2><strong>Introduction</strong></h2>
@@ -319,40 +339,304 @@ df &lt;- data.world::query(
 </div>
 <div id="section-predicting-parkinsons-severity" class="section level2">
 <h2>Predicting Parkinson’s Severity</h2>
-<p>Find relevant insights here: <a href="https://data.world/tarrantrl/f-17-eda-project-3/insights/d3b42b42-4226-4b07-86b3-0c39bfddfe2b">Forward selection</a></p>
+<p>We used boosting and random forests to model and predict total updrs, a measure of Parkinson’s severity. ### Boosting</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYm9vc3QucGFya2luc29ucz1nYm0odG90YWxfdXBkcnN+LixkYXRhPWRmX3RvdF9udW1zW3RyYWluLF0sZGlzdHJpYnV0aW9uPVwiZ2F1c3NpYW5cIixuLnRyZWVzPTEwMDAwLHNocmlua2FnZT0wLjAxLGludGVyYWN0aW9uLmRlcHRoPTQpXG5zdW1tYXJ5KGJvb3N0LnBhcmtpbnNvbnMscGxvdGl0PUZBTFNFKVxuYGBgIn0= -->
+<pre class="r"><code>boost.parkinsons=gbm(total_updrs~.,data=df_tot_nums[train,],distribution=&quot;gaussian&quot;,n.trees=10000,shrinkage=0.01,interaction.depth=4)
+summary(boost.parkinsons,plotit=FALSE)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>The boosting model shows that age is the most significant predictor in the model. After that, dfa, tes_time, binary sex status, and hnr, as well a few other variables contribute more than 1%.</p>
+<p>Next, we looked at the error from this model.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubi50cmVlcz1zZXEoZnJvbT0xMDAsdG89MTAwMDAsYnk9MTAwKVxucHJlZG1hdD1wcmVkaWN0KGJvb3N0LnBhcmtpbnNvbnMsbmV3ZGF0YT1kZl90b3RfbnVtc1stdHJhaW4sXSxuLnRyZWVzPW4udHJlZXMpXG5kaW0ocHJlZG1hdClcblxuYmVycj13aXRoKGRmX3RvdF9udW1zWy10cmFpbixdLGFwcGx5KCAocHJlZG1hdC10b3RhbF91cGRycyleMiwyLG1lYW4pKVxucmVuZGVyUGxvdChwbG90KG4udHJlZXMsYmVycixwY2g9MTkseWxhYj1cIk1lYW4gU3F1YXJlZCBFcnJvclwiLCB4bGFiPVwiIyBUcmVlc1wiLG1haW49XCJCb29zdGluZyBUZXN0IEVycm9yXCIpKVxucmVuZGVyUGxvdChhYmxpbmUoaD1taW4oYmVyciksY29sPVwicmVkXCIpKVxuYGBgIn0= -->
+<pre class="r"><code>n.trees=seq(from=100,to=10000,by=100)
+predmat=predict(boost.parkinsons,newdata=df_tot_nums[-train,],n.trees=n.trees)
+dim(predmat)
+
+berr=with(df_tot_nums[-train,],apply( (predmat-total_updrs)^2,2,mean))
+renderPlot(plot(n.trees,berr,pch=19,ylab=&quot;Mean Squared Error&quot;, xlab=&quot;# Trees&quot;,main=&quot;Boosting Test Error&quot;))
+renderPlot(abline(h=min(berr),col=&quot;red&quot;))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>The error with 10000 trees gets quite low, which is a significant improvement over the models found in the previous project.</p>
+<div id="section-random-forest" class="section level3">
+<h3>Random Forest</h3>
+<p>We also used a random forest model to predict total updrs.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmYudG90YWw9cmFuZG9tRm9yZXN0KHRvdGFsX3VwZHJzfi4sZGF0YT1kZl90b3RfbnVtcyxzdWJzZXQ9dHJhaW4pXG5yZi50b3RhbFxuYGBgIn0= -->
+<pre class="r"><code>rf.total=randomForest(total_updrs~.,data=df_tot_nums,subset=train)
+rf.total</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>This shows that the total variance explained is 80%.</p>
+<p>We looked at the testing error and out-of-bag error estimate for this model for mtry of 1 through 19, the total number of predictors. Mtry of 19 is the same as bagging.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGltKGRmX3RvdF9udW1zKVxub29iLmVycj1kb3VibGUoMTkpXG50ZXN0LmVycj1kb3VibGUoMTkpXG5mb3IobXRyeSBpbiAxOjE5KXtcbiAgZml0PXJhbmRvbUZvcmVzdCh0b3RhbF91cGRyc34uLGRhdGE9ZGZfdG90X251bXMsc3Vic2V0PXRyYWluLG50cmVlPTQwMClcbiAgb29iLmVyclttdHJ5XT1maXQkbXNlWzQwMF1cbiAgcHJlZD1wcmVkaWN0KGZpdCxkZl90b3RfbnVtc1stdHJhaW4sXSlcbiAgdGVzdC5lcnJbbXRyeV09d2l0aChkZl90b3RfbnVtc1stdHJhaW4sXSxtZWFuKCh0b3RhbF91cGRycy1wcmVkKV4yKSlcbiAgY2F0KG10cnksXCIgXCIpXG59XG5yZW5kZXJQbG90KG1hdHBsb3QoMTptdHJ5LGNiaW5kKHRlc3QuZXJyLG9vYi5lcnIpLHBjaD0xOSxjb2w9YyhcInJlZFwiLFwiYmx1ZVwiKSx0eXBlPVwiYlwiLHlsYWI9XCJNZWFuIFNxdWFyZWQgRXJyb3JcIikpXG5yZW5kZXJQbG90KGxlZ2VuZChcInRvcHJpZ2h0XCIsbGVnZW5kPWMoXCJPT0JcIixcIlRlc3RcIikscGNoPTE5LGNvbD1jKFwicmVkXCIsXCJibHVlXCIpKSlcbmBgYCJ9 -->
+<pre class="r"><code>dim(df_tot_nums)
+oob.err=double(19)
+test.err=double(19)
+for(mtry in 1:19){
+  fit=randomForest(total_updrs~.,data=df_tot_nums,subset=train,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_tot_nums[-train,])
+  test.err[mtry]=with(df_tot_nums[-train,],mean((total_updrs-pred)^2))
+  cat(mtry,&quot; &quot;)
+}
+renderPlot(matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c(&quot;red&quot;,&quot;blue&quot;),type=&quot;b&quot;,ylab=&quot;Mean Squared Error&quot;))
+renderPlot(legend(&quot;topright&quot;,legend=c(&quot;OOB&quot;,&quot;Test&quot;),pch=19,col=c(&quot;red&quot;,&quot;blue&quot;)))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Although tihs error seems to be jumping around quite a bit, it is important to note taht the y axis is only spaning 0.02. The dips in the error may be due to including correlated variables, of which there are a significant number. Boosting does a better job in this regard than random forests.</p>
+</div>
 <div id="section-comparison-to-subset-selection-for-parkinsons-severity" class="section level3">
 <h3>Comparison to Subset Selection for Parkinson’s Severity</h3>
+<p>Boosting and random forests do a much better job of explaining variance in the total updrs, which is the main purpose of this dataset. Boosting also has good prediction accuracy in regards to this outcome.</p>
+<p>K means clustering between total updrs and age (the most significant predictor in the boostng model) may illuminate why linear models didn’t do such a good job.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxueCA9IGRmJT4lZHBseXI6OnNlbGVjdChhZ2UsdG90YWxfdXBkcnMpXG5rbS5vdXQ9a21lYW5zKHgsNilcbmttLm91dFxucGFyKG1mcm93ID0gYygxLDIpKVxucmVuZGVyUGxvdChwbG90KHgsY29sPWttLm91dCRjbHVzdGVyLGNleD0yLG1haW4gPSBcIksgbWVhbnMgY2x1c3RlcmluZ1wiLCBwY2g9MSxsd2Q9MikpXG5yZW5kZXJQbG90KHBsb3QoeCxjb2w9ZGYkc3ViamVjdCxjZXg9MixtYWluID0gXCJBY3R1YWwgc3ViamVjdFwiLHBjaD0xLGx3ZD0yKSlcbmBgYCJ9 -->
+<pre class="r"><code>x = df%&gt;%dplyr::select(age,total_updrs)
+km.out=kmeans(x,6)
+km.out
+par(mfrow = c(1,2))
+renderPlot(plot(x,col=km.out$cluster,cex=2,main = &quot;K means clustering&quot;, pch=1,lwd=2))
+renderPlot(plot(x,col=df$subject,cex=2,main = &quot;Actual subject&quot;,pch=1,lwd=2))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>K means clustering with 6 clusters shows that the lowest total updrs scores are associated with lower ages, while the highest scores are associated with the higher ages. However, there is a lot of vertical overlap in the clusters of the middle ages, which would make it more difficult for a linear model to deal with.</p>
+<p>Find relevant insights here: <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/2e571834-aa7c-4ba9-887c-5239895d4692">Boosting for total updrs</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/4635b284-3125-4c14-85f4-1a06a2b4afa5">Updated boosting for total updrs</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/939f6c2e-6402-42bb-980a-7debf8507a62">Random forest for total updrs</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade">K means for total updrs and age</a></p>
 </div>
 </div>
 <div id="section-predicting-sex" class="section level2">
 <h2>Predicting Sex</h2>
-<div id="section-comparison-to-subset-selection" class="section level3">
-<h3>Comparison to Subset Selection</h3>
-<p>Find relevant insights here:</p>
+<p>We used boosting and random forests to predict sex, since our data predicted sex well in the previous project. We also used linear and nonlinear support vector machines to classify data by sex.</p>
+<div id="section-boosting" class="section level3">
+<h3>Boosting</h3>
+<p>First, we used boosting to predict sex.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYm9vc3QuZGZfc2V4PWdibShzZXgyfi4sZGF0YT1kZl9zZXhbdHJhaW4sXSxkaXN0cmlidXRpb249XCJnYXVzc2lhblwiLG4udHJlZXM9MTAwMDAsc2hyaW5rYWdlPTAuMDEsaW50ZXJhY3Rpb24uZGVwdGg9NClcbnN1bW1hcnkoYm9vc3QuZGZfc2V4KVxuYGBgIn0= -->
+<pre class="r"><code>boost.df_sex=gbm(sex2~.,data=df_sex[train,],distribution=&quot;gaussian&quot;,n.trees=10000,shrinkage=0.01,interaction.depth=4)
+summary(boost.df_sex)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Boosting identifies jitter abs and age as the most important predictors.</p>
+<p>We then looked at the prediction error using boosting.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubi50cmVlcz1zZXEoZnJvbT0xMDAsdG89MTAwMDAsYnk9MTAwKVxucHJlZG1hdD1wcmVkaWN0KGJvb3N0LmRmX3NleCxuZXdkYXRhPWRmX3NleFstdHJhaW4sXSxuLnRyZWVzPW4udHJlZXMpXG5iZXJyPXdpdGgoZGZfc2V4Wy10cmFpbixdLGFwcGx5KCAocHJlZG1hdC1zZXgyKV4yLDIsbWVhbikpXG5yZW5kZXJQbG90KHBsb3Qobi50cmVlcyxiZXJyLHBjaD0xOSx5bGFiPVwiTWVhbiBTcXVhcmVkIEVycm9yXCIsIHhsYWI9XCIjIFRyZWVzXCIsbWFpbj1cIkJvb3N0aW5nIFRlc3QgRXJyb3JcIikpXG5gYGAifQ== -->
+<pre class="r"><code>n.trees=seq(from=100,to=10000,by=100)
+predmat=predict(boost.df_sex,newdata=df_sex[-train,],n.trees=n.trees)
+berr=with(df_sex[-train,],apply( (predmat-sex2)^2,2,mean))
+renderPlot(plot(n.trees,berr,pch=19,ylab=&quot;Mean Squared Error&quot;, xlab=&quot;# Trees&quot;,main=&quot;Boosting Test Error&quot;))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>The test error got very low, below 0.02, with the boosting model.</p>
+<p>Find relevant insights here: <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc">Boosting for sex</a></p>
 </div>
-<div id="section-comparison-to-shrinkage-methods" class="section level3">
-<h3>Comparison to Shrinkage Methods</h3>
-<div id="section-lasso" class="section level4">
-<h4>Lasso</h4>
+<div id="section-random-forest-1" class="section level3">
+<h3>Random Forest</h3>
+<p>We also used random forests to predict sex.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmYuc2V4PXJhbmRvbUZvcmVzdChhcy5mYWN0b3Ioc2V4Mil+Li1zZXgsZGF0YT1kZl9zZXgsc3Vic2V0PXRyYWluKVxucmYuc2V4XG5gYGAifQ== -->
+<pre class="r"><code>rf.sex=randomForest(as.factor(sex2)~.-sex,data=df_sex,subset=train)
+rf.sex</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>The confusion matrix shows that this model does an overwhelmingly good job with mtry of 4.</p>
+<p>We looked at the out of bag and tesing error for mtry of 1 through 20, which 20 variables used at each split representing bagging.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxub29iLmVycj1kb3VibGUoMjApXG50ZXN0LmVycj1kb3VibGUoMjApXG5mb3IobXRyeSBpbiAxOjIwKXtcbiAgZml0PXJhbmRvbUZvcmVzdChzZXgyfi4tc2V4LGRhdGE9ZGZfc2V4LHN1YnNldD10cmFpbixtdHJ5PW10cnksbnRyZWU9NDAwKVxuICBvb2IuZXJyW210cnldPWZpdCRtc2VbNDAwXVxuICBwcmVkPXByZWRpY3QoZml0LGRmX3NleFstdHJhaW4sXSlcbiAgdGVzdC5lcnJbbXRyeV09d2l0aChkZl9zZXhbLXRyYWluLF0sbWVhbigoc2V4Mi1wcmVkKV4yKSlcbiAgY2F0KG10cnksXCIgXCIpXG59XG5yZW5kZXJQbG90KG1hdHBsb3QoMTptdHJ5LGNiaW5kKHRlc3QuZXJyLG9vYi5lcnIpLHBjaD0xOSxjb2w9YyhcInJlZFwiLFwiYmx1ZVwiKSx0eXBlPVwiYlwiLHlsYWI9XCJNZWFuIFNxdWFyZWQgRXJyb3JcIikpXG5yZW5kZXJQbG90KGxlZ2VuZChcInRvcHJpZ2h0XCIsbGVnZW5kPWMoXCJPT0JcIixcIlRlc3RcIikscGNoPTE5LGNvbD1jKFwicmVkXCIsXCJibHVlXCIpKSlcbmBgYCJ9 -->
+<pre class="r"><code>oob.err=double(20)
+test.err=double(20)
+for(mtry in 1:20){
+  fit=randomForest(sex2~.-sex,data=df_sex,subset=train,mtry=mtry,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_sex[-train,])
+  test.err[mtry]=with(df_sex[-train,],mean((sex2-pred)^2))
+  cat(mtry,&quot; &quot;)
+}
+renderPlot(matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c(&quot;red&quot;,&quot;blue&quot;),type=&quot;b&quot;,ylab=&quot;Mean Squared Error&quot;))
+renderPlot(legend(&quot;topright&quot;,legend=c(&quot;OOB&quot;,&quot;Test&quot;),pch=19,col=c(&quot;red&quot;,&quot;blue&quot;)))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Since the error reaches a minimum at mtry=20, this shows that bagging actually does a better job than random forests.</p>
+<p>Find relevant insights here: <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/b23e858d-45d1-4c2e-9022-ae4046360e50">Decision tree for sex</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/a16305c3-ebf6-4d66-b1d7-1bb20731d641">Random forest for sex</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299">Updated random forests for age and sex</a></p>
 </div>
-<div id="section-logistic-regression" class="section level4">
-<h4>Logistic Regression</h4>
+<div id="section-comparison-to-knn" class="section level3">
+<h3>Comparison to KNN</h3>
+<p>The prediction accuracy of K nearest neighbors, which was the best model in our previous project, was 0.94. Here, the error of boosting is less than 0.02, corresponding to a prediction accuracy of 0.98. Both of these models do well, but boosting wins out by a small margin. Bagging, with a test error below 0.06, also does better than KNN. This affirms the ability of both random forests and boosting to improve the prediction accuracy of decision trees to be a powerful model.</p>
 </div>
-<div id="section-linear-discriminant-analysis" class="section level4">
-<h4>Linear Discriminant Analysis</h4>
+<div id="section-comparison-to-lasso" class="section level3">
+<h3>Comparison to Lasso</h3>
+<p>In our last project, we used lasso to analyze the data and find the best predictors for predicting sex. We found that the 14 predictors with the highest coefficients were age, test_time, motor_updrs, total_updrs, jitter, jitter_abs, jitter_rap, shimmer_apq3, shimmer_dda, nhr, hnr, rpde, dfa, and ppe. In our boosting analysis, we found the top 14 predictors for sex with the highest relative influence in descending order were jitter_abs, age, jitter_ddp, motor_updrs, nhr, jitter_rap, dfa, jitter, hnr, total_updrs, shimmer_apq11, test_time, shimmer_apq5, and rpde. This boosting analysis didn’t include shimmer_apq3, shimmer_dda, and ppe, choosing jitter_ddp, shimmer_apq11, and shimmer_apq5 instead. On the whole, however, these two methods chose similar predictors, confirming the overall importance of those 11 common predictors.</p>
 </div>
-<div id="section-quadratic-discriminant-analysis" class="section level4">
-<h4>Quadratic Discriminant Analysis</h4>
+<div id="section-linear-svm" class="section level3">
+<h3>Linear SVM</h3>
+<p>After using boosting to decide which predictors influence sex the most, we decided to choose the plot of jitter_abs vs dfa to classify by sex using SVM. We first created the model:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxueD1zdWJzZXQoZGYyLCBzZWxlY3QgPSBjKGRmYSwgaml0dGVyX2FicykpXG54PW1hdHJpeCh1bmxpc3QoeCksIG5jb2wgPSAyKVxueT1kZjIkc2V4MlxuZGF0PWRhdGEuZnJhbWUoeCx5PWFzLmZhY3Rvcih5KSlcbnN2bWZpdD1zdm0oeX4uLGRhdGE9ZGF0LHR5cGU9XCJudS1jbGFzc2lmaWNhdGlvblwiLGtlcm5lbD1cImxpbmVhclwiLGNvc3Q9MTAsc2NhbGU9RkFMU0UpXG5wcmludChzdm1maXQpXG4jcGxvdChzdm1maXQsZGF0KVxuYGBgIn0= -->
+<pre class="r"><code>x=subset(df2, select = c(dfa, jitter_abs))
+x=matrix(unlist(x), ncol = 2)
+y=df2$sex2
+dat=data.frame(x,y=as.factor(y))
+svmfit=svm(y~.,data=dat,type=&quot;nu-classification&quot;,kernel=&quot;linear&quot;,cost=10,scale=FALSE)
+print(svmfit)
+#plot(svmfit,dat)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Then we created the plot of jitter_abs vs dfa and added the decision boundary with margins and the support points.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubWFrZS5ncmlkPWZ1bmN0aW9uKHgsbj0xNTApe1xuICBncmFuZ2U9YXBwbHkoeCwyLHJhbmdlKVxuICB4MT1zZXEoZnJvbT1ncmFuZ2VbMSwxXSx0bz1ncmFuZ2VbMiwxXSxsZW5ndGg9bilcbiAgeDI9c2VxKGZyb209Z3JhbmdlWzEsMl0sdG89Z3JhbmdlWzIsMl0sbGVuZ3RoPW4pXG4gIGV4cGFuZC5ncmlkKFgxPXgxLFgyPXgyKVxufVxueGdyaWQ9bWFrZS5ncmlkKHgpXG55Z3JpZD1wcmVkaWN0KHN2bWZpdCx4Z3JpZClcblxuYmV0YT1kcm9wKHQoc3ZtZml0JGNvZWZzKSUqJXhbc3ZtZml0JGluZGV4LF0pXG5iZXRhMD1zdm1maXQkcmhvXG5yZW5kZXJQbG90KHtcbiAgcGxvdCh4Z3JpZCxjb2w9YyhcInllbGxvd1wiLFwiYmx1ZVwiKVthcy5udW1lcmljKHlncmlkKV0scGNoPTIwLGNleD0uMilcbiAgcG9pbnRzKHgsY29sPXkrMyxwY2g9MTkpXG4gIHBvaW50cyh4W3N2bWZpdCRpbmRleCxdLHBjaD01LGNleD0yKVxuICBhYmxpbmUoYmV0YTAvYmV0YVsyXSwtYmV0YVsxXS9iZXRhWzJdKVxuICBhYmxpbmUoKGJldGEwLTEpL2JldGFbMl0sLWJldGFbMV0vYmV0YVsyXSxsdHk9MilcbiAgYWJsaW5lKChiZXRhMCsxKS9iZXRhWzJdLC1iZXRhWzFdL2JldGFbMl0sbHR5PTIpXG59KVxuYGBgIn0= -->
+<pre class="r"><code>make.grid=function(x,n=150){
+  grange=apply(x,2,range)
+  x1=seq(from=grange[1,1],to=grange[2,1],length=n)
+  x2=seq(from=grange[1,2],to=grange[2,2],length=n)
+  expand.grid(X1=x1,X2=x2)
+}
+xgrid=make.grid(x)
+ygrid=predict(svmfit,xgrid)
+
+beta=drop(t(svmfit$coefs)%*%x[svmfit$index,])
+beta0=svmfit$rho
+renderPlot({
+  plot(xgrid,col=c(&quot;yellow&quot;,&quot;blue&quot;)[as.numeric(ygrid)],pch=20,cex=.2)
+  points(x,col=y+3,pch=19)
+  points(x[svmfit$index,],pch=5,cex=2)
+  abline(beta0/beta[2],-beta[1]/beta[2])
+  abline((beta0-1)/beta[2],-beta[1]/beta[2],lty=2)
+  abline((beta0+1)/beta[2],-beta[1]/beta[2],lty=2)
+})</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>The linear SVM seemed to split the male and female points at an appropriate decision boundary. A large group of female points are to the left of the boundary and a large amount of male points are to the right. However, the margins are very small due to the data being so close together. Many of the male and female points overlap, so a linear SVM was not a good choice for this data.</p>
 </div>
-<div id="section-k-nearest-neighbors" class="section level4">
-<h4>K-Nearest Neighbors</h4>
-</div>
+<div id="section-nonlinear-svm" class="section level3">
+<h3>Nonlinear SVM</h3>
+<p>Next we tried classifying by sex for the same plot of jitter_abs vs dfa, except this time we used a nonlinear type SVM with a radial kernel.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxueD1zdWJzZXQoZGYyLCBzZWxlY3QgPSBjKGRmYSwgaml0dGVyX2FicykpXG54PW1hdHJpeCh1bmxpc3QoeCksIG5jb2wgPSAyKVxueT1kZjIkc2V4Mlxubmxzdm1maXQ9c3ZtKGZhY3Rvcih5KX4uLGRhdGE9ZGF0LHR5cGU9XCJudS1jbGFzc2lmaWNhdGlvblwiLHNjYWxlPVRSVUUsa2VybmVsPVwicmFkaWFsXCIsY29zdD0xMClcbiNwbG90KG5sc3ZtZml0LCBkYXQpXG5gYGAifQ== -->
+<pre class="r"><code>x=subset(df2, select = c(dfa, jitter_abs))
+x=matrix(unlist(x), ncol = 2)
+y=df2$sex2
+nlsvmfit=svm(factor(y)~.,data=dat,type=&quot;nu-classification&quot;,scale=TRUE,kernel=&quot;radial&quot;,cost=10)
+#plot(nlsvmfit, dat)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Then we plotted the new SVM nonlinear decision boundary:</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxueDE9c2VxKC41LCAuODUsIGJ5PTAuMzUvMTQ5LjApXG54Mj1zZXEoMCwgLjAwMDQsIGJ5PTAuMDAwNC8xNDkuMClcbnhncmlkPWV4cGFuZC5ncmlkKFgxPXgxLFgyPXgyKVxueWdyaWQ9cHJlZGljdChubHN2bWZpdCx4Z3JpZClcbmZ1bmM9cHJlZGljdChubHN2bWZpdCx4Z3JpZCxkZWNpc2lvbi52YWx1ZXM9VFJVRSlcbmZ1bmM9YXR0cmlidXRlcyhmdW5jKSRkZWNpc2lvblxucmVuZGVyUGxvdCh7XG4gIHBsb3QoeGdyaWQsY29sPWFzLm51bWVyaWMoeWdyaWQpLHBjaD0yMCxjZXg9LjIpXG4gIHBvaW50cyh4LGNvbD15KzEscGNoPTE5KVxuICBjb250b3VyKHgxLHgyLG1hdHJpeChmdW5jLDE1MCwxNTApLGxldmVsPTAsYWRkPVRSVUUpXG59KVxuYGBgIn0= -->
+<pre class="r"><code>x1=seq(.5, .85, by=0.35/149.0)
+x2=seq(0, .0004, by=0.0004/149.0)
+xgrid=expand.grid(X1=x1,X2=x2)
+ygrid=predict(nlsvmfit,xgrid)
+func=predict(nlsvmfit,xgrid,decision.values=TRUE)
+func=attributes(func)$decision
+renderPlot({
+  plot(xgrid,col=as.numeric(ygrid),pch=20,cex=.2)
+  points(x,col=y+1,pch=19)
+  contour(x1,x2,matrix(func,150,150),level=0,add=TRUE)
+})</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>This decision boundary is able to classify better than the linear one due to its ability to curve around the center to capture male points in the center of the boundary and female points in the outside red area of the boundary. The abnormal shape also juts out in places to capture points that a circular shape might not have included. Overall, this is probably close to the best decision boundary that SVM can create on this data. No shape would be able to correctlly classify all of the overlapping points towards the center.</p>
+<p>Find relevant insights here: <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/fbe1f5d3-4b76-421c-8da7-8fd9b9b3bd65">Linear SVM for jitter abs and dfa</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/ced4b656-b6ba-4c34-ba96-39ff79856e9c">Non linear SVM for jitter abs and dfa</a></p>
 </div>
 </div>
 <div id="section-predicting-age" class="section level2">
 <h2>Predicting Age</h2>
+<p>Although we didn’t look into predicting age as much in the previous project, we were able to explore it more in this project using boosting and random forests. ### Boosting First, we made a boosting model to predict age as a classification problem, dividing age into younger than or equal to 65 (designated 1) and older 65 (designated 0).</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYm9vc3QuYWdlPWdibShhZ2Uyfi4tYWdlLGRhdGE9ZGZfYWdlW3RyYWluLF0sZGlzdHJpYnV0aW9uPVwiZ2F1c3NpYW5cIixuLnRyZWVzPTEwMDAwLHNocmlua2FnZT0wLjAxLGludGVyYWN0aW9uLmRlcHRoPTQpXG5zdW1tYXJ5KGJvb3N0LmFnZSxwbG90aXQ9RkFMU0UpXG5gYGAifQ== -->
+<pre class="r"><code>boost.age=gbm(age2~.-age,data=df_age[train,],distribution=&quot;gaussian&quot;,n.trees=10000,shrinkage=0.01,interaction.depth=4)
+summary(boost.age,plotit=FALSE)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Total and motor updrs both played a significant role in predicting sex, which makes sense because Parkinson’s worsens with age.</p>
+<p>We then looked at the testing error for the boosting model.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubi50cmVlcz1zZXEoZnJvbT0xMDAsdG89MTAwMDAsYnk9MTAwKVxucHJlZG1hdD1wcmVkaWN0KGJvb3N0LmFnZSxuZXdkYXRhPWRmX2FnZVstdHJhaW4sXSxuLnRyZWVzPW4udHJlZXMpXG5cbmJlcnI9d2l0aChkZl9hZ2VbLXRyYWluLF0sYXBwbHkoIChwcmVkbWF0LWFnZTIpXjIsMixtZWFuKSlcbnJlbmRlclBsb3QocGxvdChuLnRyZWVzLGJlcnIscGNoPTE5LHlsYWI9XCJNZWFuIFNxdWFyZWQgRXJyb3JcIiwgeGxhYj1cIiMgVHJlZXNcIixtYWluPVwiQm9vc3RpbmcgVGVzdCBFcnJvclwiKSlcbnJlbmRlclBsb3QoYWJsaW5lKGg9bWluKHRlc3QuZXJyKSxjb2w9XCJyZWRcIikpXG5gYGAifQ== -->
+<pre class="r"><code>n.trees=seq(from=100,to=10000,by=100)
+predmat=predict(boost.age,newdata=df_age[-train,],n.trees=n.trees)
+
+berr=with(df_age[-train,],apply( (predmat-age2)^2,2,mean))
+renderPlot(plot(n.trees,berr,pch=19,ylab=&quot;Mean Squared Error&quot;, xlab=&quot;# Trees&quot;,main=&quot;Boosting Test Error&quot;))
+renderPlot(abline(h=min(test.err),col=&quot;red&quot;))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>The error continues to decrease as the model uses more and more trees and is less than 0.06, demonstrating the predictive strength of this model.</p>
+<div id="section-random-forests" class="section level3">
+<h3>Random Forests</h3>
+<p>Next, we used a random forest model to classify age.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmYuYWdlPXJhbmRvbUZvcmVzdChhcy5mYWN0b3IoYWdlMil+Li1hZ2UsZGF0YT1kZl9hZ2Usc3Vic2V0PXRyYWluKVxucmYuYWdlXG5gYGAifQ== -->
+<pre class="r"><code>rf.age=randomForest(as.factor(age2)~.-age,data=df_age,subset=train)
+rf.age</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Less than 10% of the training data is misclassified, which is pretty good. We then looked at the out of bag and testing error, using mtry of 1 to 20.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxub29iLmVycj1kb3VibGUoMjApXG50ZXN0LmVycj1kb3VibGUoMjApXG5mb3IobXRyeSBpbiAxOjIwKXtcbiAgZml0PXJhbmRvbUZvcmVzdChhZ2Uyfi4tYWdlLGRhdGE9ZGZfYWdlLHN1YnNldD10cmFpbixtdHJ5PW10cnksbnRyZWU9NDAwKVxuICBvb2IuZXJyW210cnldPWZpdCRtc2VbNDAwXVxuICBwcmVkPXByZWRpY3QoZml0LGRmX2FnZVstdHJhaW4sXSlcbiAgdGVzdC5lcnJbbXRyeV09d2l0aChkZl9hZ2VbLXRyYWluLF0sbWVhbigoYWdlMi1wcmVkKV4yKSlcbiAgY2F0KG10cnksXCIgXCIpXG59XG5tYXRwbG90KDE6bXRyeSxjYmluZCh0ZXN0LmVycixvb2IuZXJyKSxwY2g9MTksY29sPWMoXCJyZWRcIixcImJsdWVcIiksdHlwZT1cImJcIix5bGFiPVwiTWVhbiBTcXVhcmVkIEVycm9yXCIpXG5sZWdlbmQoXCJ0b3ByaWdodFwiLGxlZ2VuZD1jKFwiT09CXCIsXCJUZXN0XCIpLHBjaD0xOSxjb2w9YyhcInJlZFwiLFwiYmx1ZVwiKSlcbmBgYCJ9 -->
+<pre class="r"><code>oob.err=double(20)
+test.err=double(20)
+for(mtry in 1:20){
+  fit=randomForest(age2~.-age,data=df_age,subset=train,mtry=mtry,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_age[-train,])
+  test.err[mtry]=with(df_age[-train,],mean((age2-pred)^2))
+  cat(mtry,&quot; &quot;)
+}
+matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c(&quot;red&quot;,&quot;blue&quot;),type=&quot;b&quot;,ylab=&quot;Mean Squared Error&quot;)
+legend(&quot;topright&quot;,legend=c(&quot;OOB&quot;,&quot;Test&quot;),pch=19,col=c(&quot;red&quot;,&quot;blue&quot;))</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>As with predicting sex using random forests, this graph shows that regular bagging actually does a better job than the random forest models. Again, this model has error less than 0.06 like boosting. The out of bag error closely predicts the testing error as well. Both of these models predict age classification with great accuracy.</p>
+<p>For relevent insights, see: <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/3f7ef916-3e2b-4cdc-93d1-e53ab8aa7c43">Decision tree predicting age</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/2b7c0f4e-f6f5-4571-8ed7-6cb160813a22">Updated decision tree predicting age</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/4142e8c0-817c-4332-a12e-356bfdbe8990">Predicting age with boosting</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/319cb9ba-854d-4051-a405-7b9899767764">Random forest for age</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/20ec2b27-1732-4702-b923-a268529fa29a">Boosting for age</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299">Updated random forests for age and sex</a></p>
+</div>
 <div id="section-comparison-to-project-3" class="section level3">
 <h3>Comparison to Project 3</h3>
+</div>
+</div>
+<div id="section-unsupervised-learning" class="section level2">
+<h2>Unsupervised Learning</h2>
+<div id="section-k-means-clustering" class="section level3">
+<h3>k-means Clustering</h3>
+</div>
+<div id="section-hierchical-clustering" class="section level3">
+<h3>Hierchical Clustering</h3>
+<p><a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade">K means for total updrs and age</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/dd034ffe-c196-43cc-a219-fa559ffd2bf1">Hierarchical clustering</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/5c848361-bac7-490c-b4b9-ba13b310e545">K means clustering for total updrs and subject</a></p>
 </div>
 </div>
 <div id="section-findings" class="section level2">
@@ -366,10 +650,11 @@ df &lt;- data.world::query(
 </div>
 <div id="section-miscellaneous-insights" class="section level2">
 <h2>Miscellaneous Insights</h2>
+<p><a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/2c86b2d3-9787-401c-91f5-9533d4cbaac6">PCA first attempt</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/ddd993c3-1fb8-441c-a3ec-3d543e566150">Boosting for status</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/4433b10d-c137-488d-92e4-ffcc3b71a0fc">Random Forests for status</a> <a href="https://data.world/tarrantrl/f-17-eda-project-4/insights/a405b6a8-0df4-40b1-9ff6-4051102ff011">Decision Tree Predicting Status</a></p>
 <!-- rnb-text-end -->
 </div>
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIlByZWRpY3Rpb24gb2YgUGFya2luc29uJ3MgRGlzZWFzZSINCmF1dGhvcjogJ0dyb3VwIDI6IEtlbGx5IEplbm5pbmdzLCBTdGVmYW5vcyBLYXBldGFuYWtpcywgTWFyY3VzIE1hcnRpbmV6LCBSYWNoZWwgVGFycmFudCwgQ2hhbmd5b25nIFlpJw0KcmVzb3VyY2VfZmlsZXM6DQotIC5SZW52aXJvbg0Kb3V0cHV0Og0KICBodG1sX25vdGVib29rOg0KICAgIGNvZGVfZm9sZGluZzogaGlkZQ0KICAgIHRvYzogeWVzDQogICAgdG9jX2RlcHRoOiA0DQogICAgdG9jX2Zsb2F0OiB5ZXMNCnJ1bnRpbWU6IHNoaW55DQotLS0NCg0KYGBge3Igc2V0dXAsIGluY2x1ZGU9RkFMU0V9DQpsaWJyYXJ5KHRpZHl2ZXJzZSkNCmxpYnJhcnkobW9kZWxyKQ0KcmVxdWlyZShkcGx5cikNCnJlcXVpcmUoTUFTUykNCnJlcXVpcmUoSVNMUikNCnJlcXVpcmUoZ2dwbG90MikNCmxpYnJhcnkobGVhcHMpDQpsaWJyYXJ5KGdsbW5ldCkNCnJlcXVpcmUodHJlZSkNCnJlcXVpcmUocmFuZG9tRm9yZXN0KQ0KcmVxdWlyZShnYm0pDQpyZXF1aXJlKGRhdGEud29ybGQpDQpyZXF1aXJlKHNoaW55KQ0Ka25pdHI6Om9wdHNfY2h1bmskc2V0KGVjaG8gPSBUUlVFKQ0KYGBgDQogIA0KIyMgKipSIFNlc3Npb24gSW5mbyoqICANCg0KYGBge3J9DQpzZXNzaW9uSW5mbygpDQpgYGANCg0KIyMgKipHaXRodWIgTGluayoqIA0KaHR0cHM6Ly9naXRodWIuY29tL21hcmN1c2dhYnJpZWxtYXJ0aW5lei9GMTctZURBLVByb2plY3Q0DQoNCiMjICoqRGF0YS5Xb3JsZCBMaW5rKioNCmh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvZi0xNy1lZGEtcHJvamVjdC00DQoNCiMjICoqQ29ubmVjdGluZyB0byBkYXRhLndvcmxkKiogDQpgYGB7cn0NCnByb2plY3QgPC0gImh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvcGFya2luc29ucy10ZWxlbW9uaXRvcmluZyINCmRhdGEud29ybGQ6OnNldF9jb25maWcoY2ZnX2VudigiRFdfQVBJIikpDQpkZiA8LSBkYXRhLndvcmxkOjpxdWVyeSgNCiAgZGF0YS53b3JsZDo6cXJ5X3NxbCgiU0VMRUNUICogRlJPTSBwYXJraW5zb25zX3RlbGVtb25pdG9yaW5nIiksDQogIGRhdGFzZXQgPSBwcm9qZWN0DQopDQpgYGANCg0KIyMgU2V0dXANCg0KDQoNCiMjICoqSW50cm9kdWN0aW9uKiogDQoNCiJUaGlzIGRhdGFzZXQgaXMgY29tcG9zZWQgb2YgYSByYW5nZSBvZiBiaW9tZWRpY2FsIHZvaWNlIG1lYXN1cmVtZW50cyBmcm9tIDQyIHBlb3BsZSB3aXRoIGVhcmx5LXN0YWdlIFBhcmtpbnNvbidzIGRpc2Vhc2UgcmVjcnVpdGVkIHRvIGEgc2l4LW1vbnRoIHRyaWFsIG9mIGEgdGVsZW1vbml0b3JpbmcgZGV2aWNlIGZvciByZW1vdGUgc3ltcHRvbSBwcm9ncmVzc2lvbiBtb25pdG9yaW5nLiBUaGUgcmVjb3JkaW5ncyB3ZXJlIGF1dG9tYXRpY2FsbHkgY2FwdHVyZWQgaW4gdGhlIHBhdGllbnQncyBob21lcy4NCg0KQ29sdW1ucyBpbiB0aGUgdGFibGUgY29udGFpbiBzdWJqZWN0IG51bWJlciwgc3ViamVjdCBhZ2UsIHN1YmplY3QgZ2VuZGVyLCB0aW1lIGludGVydmFsIGZyb20gYmFzZWxpbmUgcmVjcnVpdG1lbnQgZGF0ZSwgbW90b3IgVVBEUlMsIHRvdGFsIFVQRFJTLCBhbmQgMTYgYmlvbWVkaWNhbCB2b2ljZSBtZWFzdXJlcy4gRWFjaCByb3cgY29ycmVzcG9uZHMgdG8gb25lIG9mIDUsODc1IHZvaWNlIHJlY29yZGluZyBmcm9tIHRoZXNlIGluZGl2aWR1YWxzLiBUaGUgbWFpbiBhaW0gb2YgdGhlIGRhdGEgaXMgdG8gcHJlZGljdCB0aGUgbW90b3IgYW5kIHRvdGFsIFVQRFJTIHNjb3JlcyAoJ21vdG9yX1VQRFJTJyBhbmQgJ3RvdGFsX1VQRFJTJykgZnJvbSB0aGUgMTYgdm9pY2UgbWVhc3VyZXMuIg0KDQoNCnN1YmplY3QjIC0gSW50ZWdlciB0aGF0IHVuaXF1ZWx5IGlkZW50aWZpZXMgZWFjaCBzdWJqZWN0IA0KYWdlIC0gU3ViamVjdCBhZ2UgDQpzZXggLSBTdWJqZWN0IGdlbmRlciAnMCcgLSBtYWxlLCAnMScgLSBmZW1hbGUgDQp0ZXN0X3RpbWUgLSBUaW1lIHNpbmNlIHJlY3J1aXRtZW50IGludG8gdGhlIHRyaWFsLiBUaGUgaW50ZWdlciBwYXJ0IGlzIHRoZSBudW1iZXIgb2YgZGF5cyBzaW5jZSByZWNydWl0bWVudC4gDQptb3Rvcl9VUERSUyAtIENsaW5pY2lhbidzIG1vdG9yIFVQRFJTIHNjb3JlLCBsaW5lYXJseSBpbnRlcnBvbGF0ZWQgDQp0b3RhbF9VUERSUyAtIENsaW5pY2lhbidzIHRvdGFsIFVQRFJTIHNjb3JlLCBsaW5lYXJseSBpbnRlcnBvbGF0ZWQgKFVQRFJTIGlzIHN0YW5kcyBmb3IgVW5pZmllZCBQYXJraXNvbidzIERpc2Vhc2UgUmF0aW5nIFNjYWxlIGFuZCBpcyB1c2VkIHRvIHJhdGUgdGhlIHNldmVyaXR5IG9mIFBhcmtpbnNvbidzKQ0KSml0dGVyKCUpLEppdHRlcihBYnMpLEppdHRlcjpSQVAsSml0dGVyOlBQUTUsSml0dGVyOkREUCAtIFNldmVyYWwgbWVhc3VyZXMgb2YgdmFyaWF0aW9uIGluIGZ1bmRhbWVudGFsIGZyZXF1ZW5jeSAoZnVuZGFtZW50YWwgZnJlcXVlbmN5IGlzIHRoZSBsb3dlc3QgZnJlcXVlbmN5IG9mIGEgc291bmQgd2F2ZSkuDQpTaGltbWVyLFNoaW1tZXIoZEIpLFNoaW1tZXI6QVBRMyxTaGltbWVyOkFQUTUsU2hpbW1lcjpBUFExMSxTaGltbWVyOkREQSAtIFNldmVyYWwgbWVhc3VyZXMgb2YgdmFyaWF0aW9uIGluIGFtcGxpdHVkZSANCk5IUixITlIgLSBUd28gbWVhc3VyZXMgb2YgcmF0aW8gb2Ygbm9pc2UgdG8gdG9uYWwgY29tcG9uZW50cyBpbiB0aGUgdm9pY2UgDQpSUERFIC0gQSBub25saW5lYXIgZHluYW1pY2FsIGNvbXBsZXhpdHkgbWVhc3VyZSANCkRGQSAtIFNpZ25hbCBmcmFjdGFsIHNjYWxpbmcgZXhwb25lbnQgDQpQUEUgLSBBIG5vbmxpbmVhciBtZWFzdXJlIG9mIGZ1bmRhbWVudGFsIGZyZXF1ZW5jeSB2YXJpYXRpb24NCg0KVGhpcyBkb2N1bWVudCB3aWxsIGNvbXBhcmUgbW9kZWxzIGJhc2VkIG9uIHRoZSBwcmVkaWN0b3JzIGNob3NlbiBieSBiZXN0IHN1YnNldCBzZWxlY3Rpb24sIGZvcndhcmQgc2VsZWN0aW9uLCBhbmQgYmFja3dhcmQgc2VsZWN0aW9uLiBUaGVzZSBtb2RlbHMgaW5jbHVkZSBMb2dpc3RpYyBSZWdyZXNzaW9uLCBMaW5lYXIgRGlzY3JpbWluYW50IEFuYWx5c2lzLCBRdWFkcmF0aWMgRGlzY3JpbWluYW50IEFuYWx5c2lzLCBhbmQgSy1OZWFyZXN0IE5laWdoYm9ycy4NCg0KIyMgUHJlZGljdGluZyBQYXJraW5zb24ncyBTZXZlcml0eQ0KDQoNCkZpbmQgcmVsZXZhbnQgaW5zaWdodHMgaGVyZToNCltGb3J3YXJkIHNlbGVjdGlvbl0oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTMvaW5zaWdodHMvZDNiNDJiNDItNDIyNi00YjA3LTg2YjMtMGMzOWJmZGRmZTJiKQ0KDQojIyMgQ29tcGFyaXNvbiB0byBTdWJzZXQgU2VsZWN0aW9uIGZvciBQYXJraW5zb24ncyBTZXZlcml0eQ0KDQoNCg0KIyMgUHJlZGljdGluZyBTZXgNCg0KIyMjIENvbXBhcmlzb24gdG8gU3Vic2V0IFNlbGVjdGlvbg0KDQpGaW5kIHJlbGV2YW50IGluc2lnaHRzIGhlcmU6DQoNCg0KIyMjIENvbXBhcmlzb24gdG8gU2hyaW5rYWdlIE1ldGhvZHMNCg0KIyMjIyBMYXNzbw0KDQoNCiMjIyMgTG9naXN0aWMgUmVncmVzc2lvbg0KDQoNCiMjIyMgTGluZWFyIERpc2NyaW1pbmFudCBBbmFseXNpcw0KDQoNCiMjIyMgUXVhZHJhdGljIERpc2NyaW1pbmFudCBBbmFseXNpcw0KDQoNCiMjIyMgSy1OZWFyZXN0IE5laWdoYm9ycw0KDQoNCiMjIFByZWRpY3RpbmcgQWdlDQoNCiMjIyBDb21wYXJpc29uIHRvIFByb2plY3QgMw0KDQoNCg0KIyMgRmluZGluZ3MNCiMjIyBDb21wYXJpc29uIHRvIFByb2plY3QgMyBNZXRob2RzDQoNCg0KIyMjIEZpbmFsIFRob3VnaHRzDQoNCg0KIyNNaXNjZWxsYW5lb3VzIEluc2lnaHRzDQoNCg==</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIlByZWRpY3Rpb24gb2YgUGFya2luc29uJ3MgRGlzZWFzZSINCmF1dGhvcjogJ0dyb3VwIDI6IEtlbGx5IEplbm5pbmdzLCBTdGVmYW5vcyBLYXBldGFuYWtpcywgTWFyY3VzIE1hcnRpbmV6LCBSYWNoZWwgVGFycmFudCwgQ2hhbmd5b25nIFlpJw0KcmVzb3VyY2VfZmlsZXM6DQotIC5SZW52aXJvbg0Kb3V0cHV0Og0KICBodG1sX25vdGVib29rOg0KICAgIGNvZGVfZm9sZGluZzogaGlkZQ0KICAgIHRvYzogeWVzDQogICAgdG9jX2RlcHRoOiA0DQogICAgdG9jX2Zsb2F0OiB5ZXMNCnJ1bnRpbWU6IHNoaW55DQotLS0NCg0KYGBge3Igc2V0dXAsIGluY2x1ZGU9RkFMU0V9DQpsaWJyYXJ5KHRpZHl2ZXJzZSkNCmxpYnJhcnkobW9kZWxyKQ0KcmVxdWlyZShkcGx5cikNCnJlcXVpcmUoTUFTUykNCnJlcXVpcmUoSVNMUikNCnJlcXVpcmUoZ2dwbG90MikNCmxpYnJhcnkobGVhcHMpDQpsaWJyYXJ5KGdsbW5ldCkNCnJlcXVpcmUodHJlZSkNCnJlcXVpcmUocmFuZG9tRm9yZXN0KQ0KcmVxdWlyZShnYm0pDQpyZXF1aXJlKGRhdGEud29ybGQpDQpyZXF1aXJlKHNoaW55KQ0KcmVxdWlyZShlMTA3MSkNCmtuaXRyOjpvcHRzX2NodW5rJHNldChlY2hvID0gVFJVRSkNCmBgYA0KICANCiMjICoqUiBTZXNzaW9uIEluZm8qKiAgDQoNCmBgYHtyfQ0Kc2Vzc2lvbkluZm8oKQ0KYGBgDQoNCiMjICoqR2l0aHViIExpbmsqKiANCmh0dHBzOi8vZ2l0aHViLmNvbS9tYXJjdXNnYWJyaWVsbWFydGluZXovRjE3LWVEQS1Qcm9qZWN0NA0KDQojIyAqKkRhdGEuV29ybGQgTGluayoqDQpodHRwczovL2RhdGEud29ybGQvdGFycmFudHJsL2YtMTctZWRhLXByb2plY3QtNA0KDQojIyAqKkNvbm5lY3RpbmcgdG8gZGF0YS53b3JsZCoqIA0KYGBge3J9DQpwcm9qZWN0IDwtICJodHRwczovL2RhdGEud29ybGQvdGFycmFudHJsL3BhcmtpbnNvbnMtdGVsZW1vbml0b3JpbmciDQpkYXRhLndvcmxkOjpzZXRfY29uZmlnKGNmZ19lbnYoIkRXX0FQSSIpKQ0KZGYgPC0gZGF0YS53b3JsZDo6cXVlcnkoDQogIGRhdGEud29ybGQ6OnFyeV9zcWwoIlNFTEVDVCAqIEZST00gcGFya2luc29uc190ZWxlbW9uaXRvcmluZyIpLA0KICBkYXRhc2V0ID0gcHJvamVjdA0KKQ0KYGBgDQoNCiMjIFNldHVwDQpXZSBjcmVhdGVkIHNldmVyYWwgZGF0YWZyYW1lcyBmb3Igb3VyIGFuYWx5c2VzLiANCmBgYHtyfQ0KYXR0YWNoKGRmKQ0KDQpkZl9hZ2UgPC0gZGYgJT4lIGRwbHlyOjpzZWxlY3QoLiwgLXN1YmplY3QpICU+JSBkcGx5cjo6bXV0YXRlKGFnZTIgPSBpZmVsc2UoYWdlIDw9IDY1LCAxLCAwKSkgJT4lIGRwbHlyOjptdXRhdGUoc2V4ID0gYXMuZmFjdG9yKHNleCkpDQoNCmRmX3NleCA8LSBkZiAlPiUgZHBseXI6OnNlbGVjdCguLCAtc3ViamVjdCkgJT4lIGRwbHlyOjptdXRhdGUoc2V4MiA9IGlmZWxzZShzZXggPT0gInRydWUiLCAxLCAwKSkgJT4lIGRwbHlyOjptdXRhdGUoYWdlID0gYXMuZmFjdG9yKGFnZSkpDQoNCmRmX3RvdF9udW1zID0gZGYgJT4lIGRwbHlyOjptdXRhdGUoc2V4MiA9IGlmZWxzZShzZXggPT0gInRydWUiLCAxLCAwKSkgJT4lIGRwbHlyOjpzZWxlY3QoLXNleCwtc3ViamVjdCwtbW90b3JfdXBkcnMpDQoNCmRmMiA9IGRwbHlyOjpzZWxlY3QoZGYsIC1zdWJqZWN0KQ0KZGYyIDwtIGRmMiAlPiUgZHBseXI6Om11dGF0ZShzZXgyID0gaWZlbHNlKHNleCA9PSAidHJ1ZSIsIDEsIDApKQ0KZGYyID0gZHBseXI6OnNlbGVjdChkZjIsIC1zZXgpDQoNCnRyYWluPXNhbXBsZSgxOm5yb3coZGZfdG90X251bXMpLDI5MzcpDQpgYGANCiMjICoqSW50cm9kdWN0aW9uKiogDQoNCiJUaGlzIGRhdGFzZXQgaXMgY29tcG9zZWQgb2YgYSByYW5nZSBvZiBiaW9tZWRpY2FsIHZvaWNlIG1lYXN1cmVtZW50cyBmcm9tIDQyIHBlb3BsZSB3aXRoIGVhcmx5LXN0YWdlIFBhcmtpbnNvbidzIGRpc2Vhc2UgcmVjcnVpdGVkIHRvIGEgc2l4LW1vbnRoIHRyaWFsIG9mIGEgdGVsZW1vbml0b3JpbmcgZGV2aWNlIGZvciByZW1vdGUgc3ltcHRvbSBwcm9ncmVzc2lvbiBtb25pdG9yaW5nLiBUaGUgcmVjb3JkaW5ncyB3ZXJlIGF1dG9tYXRpY2FsbHkgY2FwdHVyZWQgaW4gdGhlIHBhdGllbnQncyBob21lcy4NCg0KQ29sdW1ucyBpbiB0aGUgdGFibGUgY29udGFpbiBzdWJqZWN0IG51bWJlciwgc3ViamVjdCBhZ2UsIHN1YmplY3QgZ2VuZGVyLCB0aW1lIGludGVydmFsIGZyb20gYmFzZWxpbmUgcmVjcnVpdG1lbnQgZGF0ZSwgbW90b3IgVVBEUlMsIHRvdGFsIFVQRFJTLCBhbmQgMTYgYmlvbWVkaWNhbCB2b2ljZSBtZWFzdXJlcy4gRWFjaCByb3cgY29ycmVzcG9uZHMgdG8gb25lIG9mIDUsODc1IHZvaWNlIHJlY29yZGluZyBmcm9tIHRoZXNlIGluZGl2aWR1YWxzLiBUaGUgbWFpbiBhaW0gb2YgdGhlIGRhdGEgaXMgdG8gcHJlZGljdCB0aGUgbW90b3IgYW5kIHRvdGFsIFVQRFJTIHNjb3JlcyAoJ21vdG9yX1VQRFJTJyBhbmQgJ3RvdGFsX1VQRFJTJykgZnJvbSB0aGUgMTYgdm9pY2UgbWVhc3VyZXMuIg0KDQoNCnN1YmplY3QjIC0gSW50ZWdlciB0aGF0IHVuaXF1ZWx5IGlkZW50aWZpZXMgZWFjaCBzdWJqZWN0IA0KYWdlIC0gU3ViamVjdCBhZ2UgDQpzZXggLSBTdWJqZWN0IGdlbmRlciAnMCcgLSBtYWxlLCAnMScgLSBmZW1hbGUgDQp0ZXN0X3RpbWUgLSBUaW1lIHNpbmNlIHJlY3J1aXRtZW50IGludG8gdGhlIHRyaWFsLiBUaGUgaW50ZWdlciBwYXJ0IGlzIHRoZSBudW1iZXIgb2YgZGF5cyBzaW5jZSByZWNydWl0bWVudC4gDQptb3Rvcl9VUERSUyAtIENsaW5pY2lhbidzIG1vdG9yIFVQRFJTIHNjb3JlLCBsaW5lYXJseSBpbnRlcnBvbGF0ZWQgDQp0b3RhbF9VUERSUyAtIENsaW5pY2lhbidzIHRvdGFsIFVQRFJTIHNjb3JlLCBsaW5lYXJseSBpbnRlcnBvbGF0ZWQgKFVQRFJTIGlzIHN0YW5kcyBmb3IgVW5pZmllZCBQYXJraXNvbidzIERpc2Vhc2UgUmF0aW5nIFNjYWxlIGFuZCBpcyB1c2VkIHRvIHJhdGUgdGhlIHNldmVyaXR5IG9mIFBhcmtpbnNvbidzKQ0KSml0dGVyKCUpLEppdHRlcihBYnMpLEppdHRlcjpSQVAsSml0dGVyOlBQUTUsSml0dGVyOkREUCAtIFNldmVyYWwgbWVhc3VyZXMgb2YgdmFyaWF0aW9uIGluIGZ1bmRhbWVudGFsIGZyZXF1ZW5jeSAoZnVuZGFtZW50YWwgZnJlcXVlbmN5IGlzIHRoZSBsb3dlc3QgZnJlcXVlbmN5IG9mIGEgc291bmQgd2F2ZSkuDQpTaGltbWVyLFNoaW1tZXIoZEIpLFNoaW1tZXI6QVBRMyxTaGltbWVyOkFQUTUsU2hpbW1lcjpBUFExMSxTaGltbWVyOkREQSAtIFNldmVyYWwgbWVhc3VyZXMgb2YgdmFyaWF0aW9uIGluIGFtcGxpdHVkZSANCk5IUixITlIgLSBUd28gbWVhc3VyZXMgb2YgcmF0aW8gb2Ygbm9pc2UgdG8gdG9uYWwgY29tcG9uZW50cyBpbiB0aGUgdm9pY2UgDQpSUERFIC0gQSBub25saW5lYXIgZHluYW1pY2FsIGNvbXBsZXhpdHkgbWVhc3VyZSANCkRGQSAtIFNpZ25hbCBmcmFjdGFsIHNjYWxpbmcgZXhwb25lbnQgDQpQUEUgLSBBIG5vbmxpbmVhciBtZWFzdXJlIG9mIGZ1bmRhbWVudGFsIGZyZXF1ZW5jeSB2YXJpYXRpb24NCg0KVGhpcyBkb2N1bWVudCB3aWxsIGNvbXBhcmUgbW9kZWxzIGJhc2VkIG9uIHRoZSBwcmVkaWN0b3JzIGNob3NlbiBieSBiZXN0IHN1YnNldCBzZWxlY3Rpb24sIGZvcndhcmQgc2VsZWN0aW9uLCBhbmQgYmFja3dhcmQgc2VsZWN0aW9uLiBUaGVzZSBtb2RlbHMgaW5jbHVkZSBMb2dpc3RpYyBSZWdyZXNzaW9uLCBMaW5lYXIgRGlzY3JpbWluYW50IEFuYWx5c2lzLCBRdWFkcmF0aWMgRGlzY3JpbWluYW50IEFuYWx5c2lzLCBhbmQgSy1OZWFyZXN0IE5laWdoYm9ycy4NCg0KIyMgUHJlZGljdGluZyBQYXJraW5zb24ncyBTZXZlcml0eQ0KV2UgdXNlZCBib29zdGluZyBhbmQgcmFuZG9tIGZvcmVzdHMgdG8gbW9kZWwgYW5kIHByZWRpY3QgdG90YWwgdXBkcnMsIGEgbWVhc3VyZSBvZiBQYXJraW5zb24ncyBzZXZlcml0eS4NCiMjIyBCb29zdGluZw0KYGBge3J9DQpib29zdC5wYXJraW5zb25zPWdibSh0b3RhbF91cGRyc34uLGRhdGE9ZGZfdG90X251bXNbdHJhaW4sXSxkaXN0cmlidXRpb249ImdhdXNzaWFuIixuLnRyZWVzPTEwMDAwLHNocmlua2FnZT0wLjAxLGludGVyYWN0aW9uLmRlcHRoPTQpDQpzdW1tYXJ5KGJvb3N0LnBhcmtpbnNvbnMscGxvdGl0PUZBTFNFKQ0KYGBgDQpUaGUgYm9vc3RpbmcgbW9kZWwgc2hvd3MgdGhhdCBhZ2UgaXMgdGhlIG1vc3Qgc2lnbmlmaWNhbnQgcHJlZGljdG9yIGluIHRoZSBtb2RlbC4gQWZ0ZXIgdGhhdCwgZGZhLCB0ZXNfdGltZSwgYmluYXJ5IHNleCBzdGF0dXMsIGFuZCBobnIsIGFzIHdlbGwgYSBmZXcgb3RoZXIgdmFyaWFibGVzIGNvbnRyaWJ1dGUgbW9yZSB0aGFuIDElLg0KDQpOZXh0LCB3ZSBsb29rZWQgYXQgdGhlIGVycm9yIGZyb20gdGhpcyBtb2RlbC4NCmBgYHtyfQ0Kbi50cmVlcz1zZXEoZnJvbT0xMDAsdG89MTAwMDAsYnk9MTAwKQ0KcHJlZG1hdD1wcmVkaWN0KGJvb3N0LnBhcmtpbnNvbnMsbmV3ZGF0YT1kZl90b3RfbnVtc1stdHJhaW4sXSxuLnRyZWVzPW4udHJlZXMpDQpkaW0ocHJlZG1hdCkNCg0KYmVycj13aXRoKGRmX3RvdF9udW1zWy10cmFpbixdLGFwcGx5KCAocHJlZG1hdC10b3RhbF91cGRycyleMiwyLG1lYW4pKQ0KcmVuZGVyUGxvdChwbG90KG4udHJlZXMsYmVycixwY2g9MTkseWxhYj0iTWVhbiBTcXVhcmVkIEVycm9yIiwgeGxhYj0iIyBUcmVlcyIsbWFpbj0iQm9vc3RpbmcgVGVzdCBFcnJvciIpKQ0KcmVuZGVyUGxvdChhYmxpbmUoaD1taW4oYmVyciksY29sPSJyZWQiKSkNCmBgYA0KVGhlIGVycm9yIHdpdGggMTAwMDAgdHJlZXMgZ2V0cyBxdWl0ZSBsb3csIHdoaWNoIGlzIGEgc2lnbmlmaWNhbnQgaW1wcm92ZW1lbnQgb3ZlciB0aGUgbW9kZWxzIGZvdW5kIGluIHRoZSBwcmV2aW91cyBwcm9qZWN0Lg0KDQojIyMgUmFuZG9tIEZvcmVzdA0KV2UgYWxzbyB1c2VkIGEgcmFuZG9tIGZvcmVzdCBtb2RlbCB0byBwcmVkaWN0IHRvdGFsIHVwZHJzLg0KYGBge3J9DQpyZi50b3RhbD1yYW5kb21Gb3Jlc3QodG90YWxfdXBkcnN+LixkYXRhPWRmX3RvdF9udW1zLHN1YnNldD10cmFpbikNCnJmLnRvdGFsDQpgYGANClRoaXMgc2hvd3MgdGhhdCB0aGUgdG90YWwgdmFyaWFuY2UgZXhwbGFpbmVkIGlzIDgwJS4NCg0KV2UgbG9va2VkIGF0IHRoZSB0ZXN0aW5nIGVycm9yIGFuZCBvdXQtb2YtYmFnIGVycm9yIGVzdGltYXRlIGZvciB0aGlzIG1vZGVsIGZvciBtdHJ5IG9mIDEgdGhyb3VnaCAxOSwgdGhlIHRvdGFsIG51bWJlciBvZiBwcmVkaWN0b3JzLiBNdHJ5IG9mIDE5IGlzIHRoZSBzYW1lIGFzIGJhZ2dpbmcuDQpgYGB7cn0NCmRpbShkZl90b3RfbnVtcykNCm9vYi5lcnI9ZG91YmxlKDE5KQ0KdGVzdC5lcnI9ZG91YmxlKDE5KQ0KZm9yKG10cnkgaW4gMToxOSl7DQogIGZpdD1yYW5kb21Gb3Jlc3QodG90YWxfdXBkcnN+LixkYXRhPWRmX3RvdF9udW1zLHN1YnNldD10cmFpbixudHJlZT00MDApDQogIG9vYi5lcnJbbXRyeV09Zml0JG1zZVs0MDBdDQogIHByZWQ9cHJlZGljdChmaXQsZGZfdG90X251bXNbLXRyYWluLF0pDQogIHRlc3QuZXJyW210cnldPXdpdGgoZGZfdG90X251bXNbLXRyYWluLF0sbWVhbigodG90YWxfdXBkcnMtcHJlZCleMikpDQogIGNhdChtdHJ5LCIgIikNCn0NCnJlbmRlclBsb3QobWF0cGxvdCgxOm10cnksY2JpbmQodGVzdC5lcnIsb29iLmVycikscGNoPTE5LGNvbD1jKCJyZWQiLCJibHVlIiksdHlwZT0iYiIseWxhYj0iTWVhbiBTcXVhcmVkIEVycm9yIikpDQpyZW5kZXJQbG90KGxlZ2VuZCgidG9wcmlnaHQiLGxlZ2VuZD1jKCJPT0IiLCJUZXN0IikscGNoPTE5LGNvbD1jKCJyZWQiLCJibHVlIikpKQ0KYGBgDQpBbHRob3VnaCB0aWhzIGVycm9yIHNlZW1zIHRvIGJlIGp1bXBpbmcgYXJvdW5kIHF1aXRlIGEgYml0LCBpdCBpcyBpbXBvcnRhbnQgdG8gbm90ZSB0YWh0IHRoZSB5IGF4aXMgaXMgb25seSBzcGFuaW5nIDAuMDIuIFRoZSBkaXBzIGluIHRoZSBlcnJvciBtYXkgYmUgZHVlIHRvIGluY2x1ZGluZyBjb3JyZWxhdGVkIHZhcmlhYmxlcywgb2Ygd2hpY2ggdGhlcmUgYXJlIGEgc2lnbmlmaWNhbnQgbnVtYmVyLiBCb29zdGluZyBkb2VzIGEgYmV0dGVyIGpvYiBpbiB0aGlzIHJlZ2FyZCB0aGFuIHJhbmRvbSBmb3Jlc3RzLg0KDQojIyMgQ29tcGFyaXNvbiB0byBTdWJzZXQgU2VsZWN0aW9uIGZvciBQYXJraW5zb24ncyBTZXZlcml0eQ0KQm9vc3RpbmcgYW5kIHJhbmRvbSBmb3Jlc3RzIGRvIGEgbXVjaCBiZXR0ZXIgam9iIG9mIGV4cGxhaW5pbmcgdmFyaWFuY2UgaW4gdGhlIHRvdGFsIHVwZHJzLCB3aGljaCBpcyB0aGUgbWFpbiBwdXJwb3NlIG9mIHRoaXMgZGF0YXNldC4gQm9vc3RpbmcgYWxzbyBoYXMgZ29vZCBwcmVkaWN0aW9uIGFjY3VyYWN5IGluIHJlZ2FyZHMgdG8gdGhpcyBvdXRjb21lLg0KDQpLIG1lYW5zIGNsdXN0ZXJpbmcgYmV0d2VlbiB0b3RhbCB1cGRycyBhbmQgYWdlICh0aGUgbW9zdCBzaWduaWZpY2FudCBwcmVkaWN0b3IgaW4gdGhlIGJvb3N0bmcgbW9kZWwpIG1heSBpbGx1bWluYXRlIHdoeSBsaW5lYXIgbW9kZWxzIGRpZG4ndCBkbyBzdWNoIGEgZ29vZCBqb2IuDQoNCmBgYHtyfQ0KeCA9IGRmJT4lZHBseXI6OnNlbGVjdChhZ2UsdG90YWxfdXBkcnMpDQprbS5vdXQ9a21lYW5zKHgsNikNCmttLm91dA0KcGFyKG1mcm93ID0gYygxLDIpKQ0KcmVuZGVyUGxvdChwbG90KHgsY29sPWttLm91dCRjbHVzdGVyLGNleD0yLG1haW4gPSAiSyBtZWFucyBjbHVzdGVyaW5nIiwgcGNoPTEsbHdkPTIpKQ0KcmVuZGVyUGxvdChwbG90KHgsY29sPWRmJHN1YmplY3QsY2V4PTIsbWFpbiA9ICJBY3R1YWwgc3ViamVjdCIscGNoPTEsbHdkPTIpKQ0KYGBgDQoNCksgbWVhbnMgY2x1c3RlcmluZyB3aXRoIDYgY2x1c3RlcnMgc2hvd3MgdGhhdCB0aGUgbG93ZXN0IHRvdGFsIHVwZHJzIHNjb3JlcyBhcmUgYXNzb2NpYXRlZCB3aXRoIGxvd2VyIGFnZXMsIHdoaWxlIHRoZSBoaWdoZXN0IHNjb3JlcyBhcmUgYXNzb2NpYXRlZCB3aXRoIHRoZSBoaWdoZXIgYWdlcy4gSG93ZXZlciwgdGhlcmUgaXMgYSBsb3Qgb2YgdmVydGljYWwgb3ZlcmxhcCBpbiB0aGUgY2x1c3RlcnMgb2YgdGhlIG1pZGRsZSBhZ2VzLCB3aGljaCB3b3VsZCBtYWtlIGl0IG1vcmUgZGlmZmljdWx0IGZvciBhIGxpbmVhciBtb2RlbCB0byBkZWFsIHdpdGguDQoNCkZpbmQgcmVsZXZhbnQgaW5zaWdodHMgaGVyZToNCltCb29zdGluZyBmb3IgdG90YWwgdXBkcnNdKGh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvZi0xNy1lZGEtcHJvamVjdC00L2luc2lnaHRzLzJlNTcxODM0LWFhN2MtNGJhOS04ODdjLTUyMzk4OTVkNDY5MikNCltVcGRhdGVkIGJvb3N0aW5nIGZvciB0b3RhbCB1cGRyc10oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTQvaW5zaWdodHMvNDYzNWIyODQtMzEyNS00YzE0LTg1ZjQtMWEwNmEyYjRhZmE1KQ0KW1JhbmRvbSBmb3Jlc3QgZm9yIHRvdGFsIHVwZHJzXShodHRwczovL2RhdGEud29ybGQvdGFycmFudHJsL2YtMTctZWRhLXByb2plY3QtNC9pbnNpZ2h0cy85MzlmNmMyZS02NDAyLTQyYmItOTgwYS03ZGViZjg1MDdhNjIpDQpbSyBtZWFucyBmb3IgdG90YWwgdXBkcnMgYW5kIGFnZV0oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTQvaW5zaWdodHMvNzMwMmFhNDktMjc2Mi00NDFlLWEwZmUtOTQ5ZmEyZTg4YWRlKQ0KDQoNCg0KIyMgUHJlZGljdGluZyBTZXgNCldlIHVzZWQgYm9vc3RpbmcgYW5kIHJhbmRvbSBmb3Jlc3RzIHRvIHByZWRpY3Qgc2V4LCBzaW5jZSBvdXIgZGF0YSBwcmVkaWN0ZWQgc2V4IHdlbGwgaW4gdGhlIHByZXZpb3VzIHByb2plY3QuIFdlIGFsc28gdXNlZCBsaW5lYXIgYW5kIG5vbmxpbmVhciBzdXBwb3J0IHZlY3RvciBtYWNoaW5lcyB0byBjbGFzc2lmeSBkYXRhIGJ5IHNleC4NCg0KIyMjIEJvb3N0aW5nDQpGaXJzdCwgd2UgdXNlZCBib29zdGluZyB0byBwcmVkaWN0IHNleC4NCmBgYHtyfQ0KYm9vc3QuZGZfc2V4PWdibShzZXgyfi4sZGF0YT1kZl9zZXhbdHJhaW4sXSxkaXN0cmlidXRpb249ImdhdXNzaWFuIixuLnRyZWVzPTEwMDAwLHNocmlua2FnZT0wLjAxLGludGVyYWN0aW9uLmRlcHRoPTQpDQpzdW1tYXJ5KGJvb3N0LmRmX3NleCkNCmBgYA0KQm9vc3RpbmcgaWRlbnRpZmllcyBqaXR0ZXIgYWJzIGFuZCBhZ2UgYXMgdGhlIG1vc3QgaW1wb3J0YW50IHByZWRpY3RvcnMuDQoNCldlIHRoZW4gbG9va2VkIGF0IHRoZSBwcmVkaWN0aW9uIGVycm9yIHVzaW5nIGJvb3N0aW5nLg0KYGBge3J9DQpuLnRyZWVzPXNlcShmcm9tPTEwMCx0bz0xMDAwMCxieT0xMDApDQpwcmVkbWF0PXByZWRpY3QoYm9vc3QuZGZfc2V4LG5ld2RhdGE9ZGZfc2V4Wy10cmFpbixdLG4udHJlZXM9bi50cmVlcykNCmJlcnI9d2l0aChkZl9zZXhbLXRyYWluLF0sYXBwbHkoIChwcmVkbWF0LXNleDIpXjIsMixtZWFuKSkNCnJlbmRlclBsb3QocGxvdChuLnRyZWVzLGJlcnIscGNoPTE5LHlsYWI9Ik1lYW4gU3F1YXJlZCBFcnJvciIsIHhsYWI9IiMgVHJlZXMiLG1haW49IkJvb3N0aW5nIFRlc3QgRXJyb3IiKSkNCmBgYA0KVGhlIHRlc3QgZXJyb3IgZ290IHZlcnkgbG93LCBiZWxvdyAwLjAyLCB3aXRoIHRoZSBib29zdGluZyBtb2RlbC4NCg0KRmluZCByZWxldmFudCBpbnNpZ2h0cyBoZXJlOg0KW0Jvb3N0aW5nIGZvciBzZXhdKGh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvZi0xNy1lZGEtcHJvamVjdC00L2luc2lnaHRzLzZjZThkOTA1LTg4NTEtNDZhMC05YWM5LWNhMmE5NmVjODhiYykNCg0KIyMjIFJhbmRvbSBGb3Jlc3QNCldlIGFsc28gdXNlZCByYW5kb20gZm9yZXN0cyB0byBwcmVkaWN0IHNleC4NCmBgYHtyfQ0KcmYuc2V4PXJhbmRvbUZvcmVzdChhcy5mYWN0b3Ioc2V4Mil+Li1zZXgsZGF0YT1kZl9zZXgsc3Vic2V0PXRyYWluKQ0KcmYuc2V4DQpgYGANClRoZSBjb25mdXNpb24gbWF0cml4IHNob3dzIHRoYXQgdGhpcyBtb2RlbCBkb2VzIGFuIG92ZXJ3aGVsbWluZ2x5IGdvb2Qgam9iIHdpdGggbXRyeSBvZiA0Lg0KDQpXZSBsb29rZWQgYXQgdGhlIG91dCBvZiBiYWcgYW5kIHRlc2luZyBlcnJvciBmb3IgbXRyeSBvZiAxIHRocm91Z2ggMjAsIHdoaWNoIDIwIHZhcmlhYmxlcyB1c2VkIGF0IGVhY2ggc3BsaXQgcmVwcmVzZW50aW5nIGJhZ2dpbmcuDQpgYGB7cn0NCm9vYi5lcnI9ZG91YmxlKDIwKQ0KdGVzdC5lcnI9ZG91YmxlKDIwKQ0KZm9yKG10cnkgaW4gMToyMCl7DQogIGZpdD1yYW5kb21Gb3Jlc3Qoc2V4Mn4uLXNleCxkYXRhPWRmX3NleCxzdWJzZXQ9dHJhaW4sbXRyeT1tdHJ5LG50cmVlPTQwMCkNCiAgb29iLmVyclttdHJ5XT1maXQkbXNlWzQwMF0NCiAgcHJlZD1wcmVkaWN0KGZpdCxkZl9zZXhbLXRyYWluLF0pDQogIHRlc3QuZXJyW210cnldPXdpdGgoZGZfc2V4Wy10cmFpbixdLG1lYW4oKHNleDItcHJlZCleMikpDQogIGNhdChtdHJ5LCIgIikNCn0NCnJlbmRlclBsb3QobWF0cGxvdCgxOm10cnksY2JpbmQodGVzdC5lcnIsb29iLmVycikscGNoPTE5LGNvbD1jKCJyZWQiLCJibHVlIiksdHlwZT0iYiIseWxhYj0iTWVhbiBTcXVhcmVkIEVycm9yIikpDQpyZW5kZXJQbG90KGxlZ2VuZCgidG9wcmlnaHQiLGxlZ2VuZD1jKCJPT0IiLCJUZXN0IikscGNoPTE5LGNvbD1jKCJyZWQiLCJibHVlIikpKQ0KYGBgDQpTaW5jZSB0aGUgZXJyb3IgcmVhY2hlcyBhIG1pbmltdW0gYXQgbXRyeT0yMCwgdGhpcyBzaG93cyB0aGF0IGJhZ2dpbmcgYWN0dWFsbHkgZG9lcyBhIGJldHRlciBqb2IgdGhhbiByYW5kb20gZm9yZXN0cy4NCg0KRmluZCByZWxldmFudCBpbnNpZ2h0cyBoZXJlOg0KW0RlY2lzaW9uIHRyZWUgZm9yIHNleF0oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTQvaW5zaWdodHMvYjIzZTg1OGQtNDVkMS00YzJlLTkwMjItYWU0MDQ2MzYwZTUwKQ0KW1JhbmRvbSBmb3Jlc3QgZm9yIHNleF0oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTQvaW5zaWdodHMvYTE2MzA1YzMtZWJmNi00ZDY2LWIxZDctMWJiMjA3MzFkNjQxKQ0KW1VwZGF0ZWQgcmFuZG9tIGZvcmVzdHMgZm9yIGFnZSBhbmQgc2V4XShodHRwczovL2RhdGEud29ybGQvdGFycmFudHJsL2YtMTctZWRhLXByb2plY3QtNC9pbnNpZ2h0cy9iYTVmNjI4My0yMWM1LTQ5Y2UtOWQzNi1jOTBkMjYwYjYyOTkpDQoNCiMjIyBDb21wYXJpc29uIHRvIEtOTg0KVGhlIHByZWRpY3Rpb24gYWNjdXJhY3kgb2YgSyBuZWFyZXN0IG5laWdoYm9ycywgd2hpY2ggd2FzIHRoZSBiZXN0IG1vZGVsIGluIG91ciBwcmV2aW91cyBwcm9qZWN0LCB3YXMgMC45NC4gSGVyZSwgdGhlIGVycm9yIG9mIGJvb3N0aW5nIGlzIGxlc3MgdGhhbiAwLjAyLCBjb3JyZXNwb25kaW5nIHRvIGEgcHJlZGljdGlvbiBhY2N1cmFjeSBvZiAwLjk4LiBCb3RoIG9mIHRoZXNlIG1vZGVscyBkbyB3ZWxsLCBidXQgYm9vc3Rpbmcgd2lucyBvdXQgYnkgYSBzbWFsbCBtYXJnaW4uIEJhZ2dpbmcsIHdpdGggYSB0ZXN0IGVycm9yIGJlbG93IDAuMDYsIGFsc28gZG9lcyBiZXR0ZXIgdGhhbiBLTk4uIFRoaXMgYWZmaXJtcyB0aGUgYWJpbGl0eSBvZiBib3RoIHJhbmRvbSBmb3Jlc3RzIGFuZCBib29zdGluZyB0byBpbXByb3ZlIHRoZSBwcmVkaWN0aW9uIGFjY3VyYWN5IG9mIGRlY2lzaW9uIHRyZWVzIHRvIGJlIGEgcG93ZXJmdWwgbW9kZWwuDQoNCiMjIyBDb21wYXJpc29uIHRvIExhc3NvDQpJbiBvdXIgbGFzdCBwcm9qZWN0LCB3ZSB1c2VkIGxhc3NvIHRvIGFuYWx5emUgdGhlIGRhdGEgYW5kIGZpbmQgdGhlIGJlc3QgcHJlZGljdG9ycyBmb3IgcHJlZGljdGluZyBzZXguIFdlIGZvdW5kIHRoYXQgdGhlIDE0IHByZWRpY3RvcnMgd2l0aCB0aGUgaGlnaGVzdCBjb2VmZmljaWVudHMgd2VyZSBhZ2UsIHRlc3RfdGltZSwgbW90b3JfdXBkcnMsIHRvdGFsX3VwZHJzLCBqaXR0ZXIsIGppdHRlcl9hYnMsIGppdHRlcl9yYXAsIHNoaW1tZXJfYXBxMywgc2hpbW1lcl9kZGEsIG5ociwgaG5yLCBycGRlLCBkZmEsIGFuZCBwcGUuIEluIG91ciBib29zdGluZyBhbmFseXNpcywgd2UgZm91bmQgdGhlIHRvcCAxNCBwcmVkaWN0b3JzIGZvciBzZXggd2l0aCB0aGUgaGlnaGVzdCByZWxhdGl2ZSBpbmZsdWVuY2UgaW4gZGVzY2VuZGluZyBvcmRlciB3ZXJlIGppdHRlcl9hYnMsIGFnZSwgaml0dGVyX2RkcCwgbW90b3JfdXBkcnMsIG5ociwgaml0dGVyX3JhcCwgZGZhLCBqaXR0ZXIsIGhuciwgdG90YWxfdXBkcnMsIHNoaW1tZXJfYXBxMTEsIHRlc3RfdGltZSwgc2hpbW1lcl9hcHE1LCBhbmQgcnBkZS4gVGhpcyBib29zdGluZyBhbmFseXNpcyBkaWRuJ3QgaW5jbHVkZSBzaGltbWVyX2FwcTMsIHNoaW1tZXJfZGRhLCBhbmQgcHBlLCBjaG9vc2luZyBqaXR0ZXJfZGRwLCBzaGltbWVyX2FwcTExLCBhbmQgc2hpbW1lcl9hcHE1IGluc3RlYWQuIE9uIHRoZSB3aG9sZSwgaG93ZXZlciwgdGhlc2UgdHdvIG1ldGhvZHMgY2hvc2Ugc2ltaWxhciBwcmVkaWN0b3JzLCBjb25maXJtaW5nIHRoZSBvdmVyYWxsIGltcG9ydGFuY2Ugb2YgdGhvc2UgMTEgY29tbW9uIHByZWRpY3RvcnMuDQoNCiMjIyBMaW5lYXIgU1ZNDQpBZnRlciB1c2luZyBib29zdGluZyB0byBkZWNpZGUgd2hpY2ggcHJlZGljdG9ycyBpbmZsdWVuY2Ugc2V4IHRoZSBtb3N0LCB3ZSBkZWNpZGVkIHRvIGNob29zZSB0aGUgcGxvdCBvZiBqaXR0ZXJfYWJzIHZzIGRmYSB0byBjbGFzc2lmeSBieSBzZXggdXNpbmcgU1ZNLiBXZSBmaXJzdCBjcmVhdGVkIHRoZSBtb2RlbDoNCmBgYHtyfQ0KeD1zdWJzZXQoZGYyLCBzZWxlY3QgPSBjKGRmYSwgaml0dGVyX2FicykpDQp4PW1hdHJpeCh1bmxpc3QoeCksIG5jb2wgPSAyKQ0KeT1kZjIkc2V4Mg0KZGF0PWRhdGEuZnJhbWUoeCx5PWFzLmZhY3Rvcih5KSkNCnN2bWZpdD1zdm0oeX4uLGRhdGE9ZGF0LHR5cGU9Im51LWNsYXNzaWZpY2F0aW9uIixrZXJuZWw9ImxpbmVhciIsY29zdD0xMCxzY2FsZT1GQUxTRSkNCnByaW50KHN2bWZpdCkNCiNwbG90KHN2bWZpdCxkYXQpDQpgYGANClRoZW4gd2UgY3JlYXRlZCB0aGUgcGxvdCBvZiBqaXR0ZXJfYWJzIHZzIGRmYSBhbmQgYWRkZWQgdGhlIGRlY2lzaW9uIGJvdW5kYXJ5IHdpdGggbWFyZ2lucyBhbmQgdGhlIHN1cHBvcnQgcG9pbnRzLg0KYGBge3J9DQptYWtlLmdyaWQ9ZnVuY3Rpb24oeCxuPTE1MCl7DQogIGdyYW5nZT1hcHBseSh4LDIscmFuZ2UpDQogIHgxPXNlcShmcm9tPWdyYW5nZVsxLDFdLHRvPWdyYW5nZVsyLDFdLGxlbmd0aD1uKQ0KICB4Mj1zZXEoZnJvbT1ncmFuZ2VbMSwyXSx0bz1ncmFuZ2VbMiwyXSxsZW5ndGg9bikNCiAgZXhwYW5kLmdyaWQoWDE9eDEsWDI9eDIpDQp9DQp4Z3JpZD1tYWtlLmdyaWQoeCkNCnlncmlkPXByZWRpY3Qoc3ZtZml0LHhncmlkKQ0KDQpiZXRhPWRyb3AodChzdm1maXQkY29lZnMpJSoleFtzdm1maXQkaW5kZXgsXSkNCmJldGEwPXN2bWZpdCRyaG8NCnJlbmRlclBsb3Qoew0KICBwbG90KHhncmlkLGNvbD1jKCJ5ZWxsb3ciLCJibHVlIilbYXMubnVtZXJpYyh5Z3JpZCldLHBjaD0yMCxjZXg9LjIpDQogIHBvaW50cyh4LGNvbD15KzMscGNoPTE5KQ0KICBwb2ludHMoeFtzdm1maXQkaW5kZXgsXSxwY2g9NSxjZXg9MikNCiAgYWJsaW5lKGJldGEwL2JldGFbMl0sLWJldGFbMV0vYmV0YVsyXSkNCiAgYWJsaW5lKChiZXRhMC0xKS9iZXRhWzJdLC1iZXRhWzFdL2JldGFbMl0sbHR5PTIpDQogIGFibGluZSgoYmV0YTArMSkvYmV0YVsyXSwtYmV0YVsxXS9iZXRhWzJdLGx0eT0yKQ0KfSkNCmBgYA0KVGhlIGxpbmVhciBTVk0gc2VlbWVkIHRvIHNwbGl0IHRoZSBtYWxlIGFuZCBmZW1hbGUgcG9pbnRzIGF0IGFuIGFwcHJvcHJpYXRlIGRlY2lzaW9uIGJvdW5kYXJ5LiBBIGxhcmdlIGdyb3VwIG9mIGZlbWFsZSBwb2ludHMgYXJlIHRvIHRoZSBsZWZ0IG9mIHRoZSBib3VuZGFyeSBhbmQgYSBsYXJnZSBhbW91bnQgb2YgbWFsZSBwb2ludHMgYXJlIHRvIHRoZSByaWdodC4gSG93ZXZlciwgdGhlIG1hcmdpbnMgYXJlIHZlcnkgc21hbGwgZHVlIHRvIHRoZSBkYXRhIGJlaW5nIHNvIGNsb3NlIHRvZ2V0aGVyLiBNYW55IG9mIHRoZSBtYWxlIGFuZCBmZW1hbGUgcG9pbnRzIG92ZXJsYXAsIHNvIGEgbGluZWFyIFNWTSB3YXMgbm90IGEgZ29vZCBjaG9pY2UgZm9yIHRoaXMgZGF0YS4gDQoNCiMjIyBOb25saW5lYXIgU1ZNDQpOZXh0IHdlIHRyaWVkIGNsYXNzaWZ5aW5nIGJ5IHNleCBmb3IgdGhlIHNhbWUgcGxvdCBvZiBqaXR0ZXJfYWJzIHZzIGRmYSwgZXhjZXB0IHRoaXMgdGltZSB3ZSB1c2VkIGEgbm9ubGluZWFyIHR5cGUgU1ZNIHdpdGggYSByYWRpYWwga2VybmVsLg0KYGBge3J9DQp4PXN1YnNldChkZjIsIHNlbGVjdCA9IGMoZGZhLCBqaXR0ZXJfYWJzKSkNCng9bWF0cml4KHVubGlzdCh4KSwgbmNvbCA9IDIpDQp5PWRmMiRzZXgyDQpubHN2bWZpdD1zdm0oZmFjdG9yKHkpfi4sZGF0YT1kYXQsdHlwZT0ibnUtY2xhc3NpZmljYXRpb24iLHNjYWxlPVRSVUUsa2VybmVsPSJyYWRpYWwiLGNvc3Q9MTApDQojcGxvdChubHN2bWZpdCwgZGF0KQ0KYGBgDQpUaGVuIHdlIHBsb3R0ZWQgdGhlIG5ldyBTVk0gbm9ubGluZWFyIGRlY2lzaW9uIGJvdW5kYXJ5Og0KYGBge3J9DQp4MT1zZXEoLjUsIC44NSwgYnk9MC4zNS8xNDkuMCkNCngyPXNlcSgwLCAuMDAwNCwgYnk9MC4wMDA0LzE0OS4wKQ0KeGdyaWQ9ZXhwYW5kLmdyaWQoWDE9eDEsWDI9eDIpDQp5Z3JpZD1wcmVkaWN0KG5sc3ZtZml0LHhncmlkKQ0KZnVuYz1wcmVkaWN0KG5sc3ZtZml0LHhncmlkLGRlY2lzaW9uLnZhbHVlcz1UUlVFKQ0KZnVuYz1hdHRyaWJ1dGVzKGZ1bmMpJGRlY2lzaW9uDQpyZW5kZXJQbG90KHsNCiAgcGxvdCh4Z3JpZCxjb2w9YXMubnVtZXJpYyh5Z3JpZCkscGNoPTIwLGNleD0uMikNCiAgcG9pbnRzKHgsY29sPXkrMSxwY2g9MTkpDQogIGNvbnRvdXIoeDEseDIsbWF0cml4KGZ1bmMsMTUwLDE1MCksbGV2ZWw9MCxhZGQ9VFJVRSkNCn0pDQpgYGANClRoaXMgZGVjaXNpb24gYm91bmRhcnkgaXMgYWJsZSB0byBjbGFzc2lmeSBiZXR0ZXIgdGhhbiB0aGUgbGluZWFyIG9uZSBkdWUgdG8gaXRzIGFiaWxpdHkgdG8gY3VydmUgYXJvdW5kIHRoZSBjZW50ZXIgdG8gY2FwdHVyZSBtYWxlIHBvaW50cyBpbiB0aGUgY2VudGVyIG9mIHRoZSBib3VuZGFyeSBhbmQgZmVtYWxlIHBvaW50cyBpbiB0aGUgb3V0c2lkZSByZWQgYXJlYSBvZiB0aGUgYm91bmRhcnkuIFRoZSBhYm5vcm1hbCBzaGFwZSBhbHNvIGp1dHMgb3V0IGluIHBsYWNlcyB0byBjYXB0dXJlIHBvaW50cyB0aGF0IGEgY2lyY3VsYXIgc2hhcGUgbWlnaHQgbm90IGhhdmUgaW5jbHVkZWQuIE92ZXJhbGwsIHRoaXMgaXMgcHJvYmFibHkgY2xvc2UgdG8gdGhlIGJlc3QgZGVjaXNpb24gYm91bmRhcnkgdGhhdCBTVk0gY2FuIGNyZWF0ZSBvbiB0aGlzIGRhdGEuIE5vIHNoYXBlIHdvdWxkIGJlIGFibGUgdG8gY29ycmVjdGxseSBjbGFzc2lmeSBhbGwgb2YgdGhlIG92ZXJsYXBwaW5nIHBvaW50cyB0b3dhcmRzIHRoZSBjZW50ZXIuDQoNCkZpbmQgcmVsZXZhbnQgaW5zaWdodHMgaGVyZToNCltMaW5lYXIgU1ZNIGZvciBqaXR0ZXIgYWJzIGFuZCBkZmFdKGh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvZi0xNy1lZGEtcHJvamVjdC00L2luc2lnaHRzL2ZiZTFmNWQzLTRiNzYtNDIxYy04ZGE3LThmZDliOWIzYmQ2NSkNCltOb24gbGluZWFyIFNWTSBmb3Igaml0dGVyIGFicyBhbmQgZGZhXShodHRwczovL2RhdGEud29ybGQvdGFycmFudHJsL2YtMTctZWRhLXByb2plY3QtNC9pbnNpZ2h0cy9jZWQ0YjY1Ni1iNmJhLTRjMzQtYmE5Ni0zOWZmNzk4NTZlOWMpDQoNCg0KIyMgUHJlZGljdGluZyBBZ2UNCkFsdGhvdWdoIHdlIGRpZG4ndCBsb29rIGludG8gcHJlZGljdGluZyBhZ2UgYXMgbXVjaCBpbiB0aGUgcHJldmlvdXMgcHJvamVjdCwgd2Ugd2VyZSBhYmxlIHRvIGV4cGxvcmUgaXQgbW9yZSBpbiB0aGlzIHByb2plY3QgdXNpbmcgYm9vc3RpbmcgYW5kIHJhbmRvbSBmb3Jlc3RzLg0KIyMjIEJvb3N0aW5nDQpGaXJzdCwgd2UgbWFkZSBhIGJvb3N0aW5nIG1vZGVsIHRvIHByZWRpY3QgYWdlIGFzIGEgY2xhc3NpZmljYXRpb24gcHJvYmxlbSwgZGl2aWRpbmcgYWdlIGludG8geW91bmdlciB0aGFuIG9yIGVxdWFsIHRvIDY1IChkZXNpZ25hdGVkIDEpIGFuZCBvbGRlciA2NSAoZGVzaWduYXRlZCAwKS4NCmBgYHtyfQ0KYm9vc3QuYWdlPWdibShhZ2Uyfi4tYWdlLGRhdGE9ZGZfYWdlW3RyYWluLF0sZGlzdHJpYnV0aW9uPSJnYXVzc2lhbiIsbi50cmVlcz0xMDAwMCxzaHJpbmthZ2U9MC4wMSxpbnRlcmFjdGlvbi5kZXB0aD00KQ0Kc3VtbWFyeShib29zdC5hZ2UscGxvdGl0PUZBTFNFKQ0KYGBgDQpUb3RhbCBhbmQgbW90b3IgdXBkcnMgYm90aCBwbGF5ZWQgYSBzaWduaWZpY2FudCByb2xlIGluIHByZWRpY3Rpbmcgc2V4LCB3aGljaCBtYWtlcyBzZW5zZSBiZWNhdXNlIFBhcmtpbnNvbidzIHdvcnNlbnMgd2l0aCBhZ2UuDQoNCldlIHRoZW4gbG9va2VkIGF0IHRoZSB0ZXN0aW5nIGVycm9yIGZvciB0aGUgYm9vc3RpbmcgbW9kZWwuDQpgYGB7cn0NCm4udHJlZXM9c2VxKGZyb209MTAwLHRvPTEwMDAwLGJ5PTEwMCkNCnByZWRtYXQ9cHJlZGljdChib29zdC5hZ2UsbmV3ZGF0YT1kZl9hZ2VbLXRyYWluLF0sbi50cmVlcz1uLnRyZWVzKQ0KDQpiZXJyPXdpdGgoZGZfYWdlWy10cmFpbixdLGFwcGx5KCAocHJlZG1hdC1hZ2UyKV4yLDIsbWVhbikpDQpyZW5kZXJQbG90KHBsb3Qobi50cmVlcyxiZXJyLHBjaD0xOSx5bGFiPSJNZWFuIFNxdWFyZWQgRXJyb3IiLCB4bGFiPSIjIFRyZWVzIixtYWluPSJCb29zdGluZyBUZXN0IEVycm9yIikpDQpyZW5kZXJQbG90KGFibGluZShoPW1pbih0ZXN0LmVyciksY29sPSJyZWQiKSkNCmBgYA0KVGhlIGVycm9yIGNvbnRpbnVlcyB0byBkZWNyZWFzZSBhcyB0aGUgbW9kZWwgdXNlcyBtb3JlIGFuZCBtb3JlIHRyZWVzIGFuZCBpcyBsZXNzIHRoYW4gMC4wNiwgZGVtb25zdHJhdGluZyB0aGUgcHJlZGljdGl2ZSBzdHJlbmd0aCBvZiB0aGlzIG1vZGVsLg0KDQojIyMgUmFuZG9tIEZvcmVzdHMNCk5leHQsIHdlIHVzZWQgYSByYW5kb20gZm9yZXN0IG1vZGVsIHRvIGNsYXNzaWZ5IGFnZS4NCmBgYHtyfQ0KcmYuYWdlPXJhbmRvbUZvcmVzdChhcy5mYWN0b3IoYWdlMil+Li1hZ2UsZGF0YT1kZl9hZ2Usc3Vic2V0PXRyYWluKQ0KcmYuYWdlDQpgYGANCkxlc3MgdGhhbiAxMCUgb2YgdGhlIHRyYWluaW5nIGRhdGEgaXMgbWlzY2xhc3NpZmllZCwgd2hpY2ggaXMgcHJldHR5IGdvb2QuDQpXZSB0aGVuIGxvb2tlZCBhdCB0aGUgb3V0IG9mIGJhZyBhbmQgdGVzdGluZyBlcnJvciwgdXNpbmcgbXRyeSBvZiAxIHRvIDIwLg0KYGBge3J9DQpvb2IuZXJyPWRvdWJsZSgyMCkNCnRlc3QuZXJyPWRvdWJsZSgyMCkNCmZvcihtdHJ5IGluIDE6MjApew0KICBmaXQ9cmFuZG9tRm9yZXN0KGFnZTJ+Li1hZ2UsZGF0YT1kZl9hZ2Usc3Vic2V0PXRyYWluLG10cnk9bXRyeSxudHJlZT00MDApDQogIG9vYi5lcnJbbXRyeV09Zml0JG1zZVs0MDBdDQogIHByZWQ9cHJlZGljdChmaXQsZGZfYWdlWy10cmFpbixdKQ0KICB0ZXN0LmVyclttdHJ5XT13aXRoKGRmX2FnZVstdHJhaW4sXSxtZWFuKChhZ2UyLXByZWQpXjIpKQ0KICBjYXQobXRyeSwiICIpDQp9DQptYXRwbG90KDE6bXRyeSxjYmluZCh0ZXN0LmVycixvb2IuZXJyKSxwY2g9MTksY29sPWMoInJlZCIsImJsdWUiKSx0eXBlPSJiIix5bGFiPSJNZWFuIFNxdWFyZWQgRXJyb3IiKQ0KbGVnZW5kKCJ0b3ByaWdodCIsbGVnZW5kPWMoIk9PQiIsIlRlc3QiKSxwY2g9MTksY29sPWMoInJlZCIsImJsdWUiKSkNCmBgYA0KQXMgd2l0aCBwcmVkaWN0aW5nIHNleCB1c2luZyByYW5kb20gZm9yZXN0cywgdGhpcyBncmFwaCBzaG93cyB0aGF0IHJlZ3VsYXIgYmFnZ2luZyBhY3R1YWxseSBkb2VzIGEgYmV0dGVyIGpvYiB0aGFuIHRoZSByYW5kb20gZm9yZXN0IG1vZGVscy4gQWdhaW4sIHRoaXMgbW9kZWwgaGFzIGVycm9yIGxlc3MgdGhhbiAwLjA2IGxpa2UgYm9vc3RpbmcuIFRoZSBvdXQgb2YgYmFnIGVycm9yIGNsb3NlbHkgcHJlZGljdHMgdGhlIHRlc3RpbmcgZXJyb3IgYXMgd2VsbC4gQm90aCBvZiB0aGVzZSBtb2RlbHMgcHJlZGljdCBhZ2UgY2xhc3NpZmljYXRpb24gd2l0aCBncmVhdCBhY2N1cmFjeS4NCg0KDQpGb3IgcmVsZXZlbnQgaW5zaWdodHMsIHNlZToNCltEZWNpc2lvbiB0cmVlIHByZWRpY3RpbmcgYWdlXShodHRwczovL2RhdGEud29ybGQvdGFycmFudHJsL2YtMTctZWRhLXByb2plY3QtNC9pbnNpZ2h0cy8zZjdlZjkxNi0zZTJiLTRjZGMtOTNkMS1lNTNhYjhhYTdjNDMpDQpbVXBkYXRlZCBkZWNpc2lvbiB0cmVlIHByZWRpY3RpbmcgYWdlXShodHRwczovL2RhdGEud29ybGQvdGFycmFudHJsL2YtMTctZWRhLXByb2plY3QtNC9pbnNpZ2h0cy8yYjdjMGY0ZS1mNmY1LTQ1NzEtOGVkNy02Y2IxNjA4MTNhMjIpDQpbUHJlZGljdGluZyBhZ2Ugd2l0aCBib29zdGluZ10oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTQvaW5zaWdodHMvNDE0MmU4YzAtODE3Yy00MzMyLWExMmUtMzU2YmZkYmU4OTkwKQ0KW1JhbmRvbSBmb3Jlc3QgZm9yIGFnZV0oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTQvaW5zaWdodHMvMzE5Y2I5YmEtODU0ZC00MDUxLWE0MDUtN2I5ODk5NzY3NzY0KQ0KW0Jvb3N0aW5nIGZvciBhZ2VdKGh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvZi0xNy1lZGEtcHJvamVjdC00L2luc2lnaHRzLzIwZWMyYjI3LTE3MzItNDcwMi1iOTIzLWEyNjg1MjlmYTI5YSkNCltVcGRhdGVkIHJhbmRvbSBmb3Jlc3RzIGZvciBhZ2UgYW5kIHNleF0oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTQvaW5zaWdodHMvYmE1ZjYyODMtMjFjNS00OWNlLTlkMzYtYzkwZDI2MGI2Mjk5KQ0KDQoNCg0KIyMjIENvbXBhcmlzb24gdG8gUHJvamVjdCAzDQoNCiMjIFVuc3VwZXJ2aXNlZCBMZWFybmluZw0KDQojIyMgay1tZWFucyBDbHVzdGVyaW5nDQoNCiMjIyBIaWVyY2hpY2FsIENsdXN0ZXJpbmcNCg0KW0sgbWVhbnMgZm9yIHRvdGFsIHVwZHJzIGFuZCBhZ2VdKGh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvZi0xNy1lZGEtcHJvamVjdC00L2luc2lnaHRzLzczMDJhYTQ5LTI3NjItNDQxZS1hMGZlLTk0OWZhMmU4OGFkZSkNCltIaWVyYXJjaGljYWwgY2x1c3RlcmluZ10oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTQvaW5zaWdodHMvZGQwMzRmZmUtYzE5Ni00M2NjLWEyMTktZmE1NTlmZmQyYmYxKQ0KW0sgbWVhbnMgY2x1c3RlcmluZyBmb3IgdG90YWwgdXBkcnMgYW5kIHN1YmplY3RdKGh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvZi0xNy1lZGEtcHJvamVjdC00L2luc2lnaHRzLzVjODQ4MzYxLWJhYzctNDkwYy1iNGI5LWJhMTNiMzEwZTU0NSkNCg0KDQojIyBGaW5kaW5ncw0KIyMjIENvbXBhcmlzb24gdG8gUHJvamVjdCAzIE1ldGhvZHMNCg0KDQojIyMgRmluYWwgVGhvdWdodHMNCg0KDQojIyBNaXNjZWxsYW5lb3VzIEluc2lnaHRzDQpbUENBIGZpcnN0IGF0dGVtcHRdKGh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvZi0xNy1lZGEtcHJvamVjdC00L2luc2lnaHRzLzJjODZiMmQzLTk3ODctNDAxYy05MWY1LTk1MzNkNGNiYWFjNikNCltCb29zdGluZyBmb3Igc3RhdHVzXShodHRwczovL2RhdGEud29ybGQvdGFycmFudHJsL2YtMTctZWRhLXByb2plY3QtNC9pbnNpZ2h0cy9kZGQ5OTNjMy0xZmI4LTQ0MWMtYTNlYy0zZDU0M2U1NjYxNTApDQpbUmFuZG9tIEZvcmVzdHMgZm9yIHN0YXR1c10oaHR0cHM6Ly9kYXRhLndvcmxkL3RhcnJhbnRybC9mLTE3LWVkYS1wcm9qZWN0LTQvaW5zaWdodHMvNDQzM2IxMGQtYzEzNy00ODhkLTkyZTQtZmZjYzNiNzFhMGZjKQ0KW0RlY2lzaW9uIFRyZWUgUHJlZGljdGluZyBTdGF0dXNdKGh0dHBzOi8vZGF0YS53b3JsZC90YXJyYW50cmwvZi0xNy1lZGEtcHJvamVjdC00L2luc2lnaHRzL2E0MDViNmE4LTBkZjQtNDBiMS05ZmY2LTQwNTExMDJmZjAxMSkNCg==</div>
 
 
 </div>
