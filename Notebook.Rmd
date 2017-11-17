@@ -95,24 +95,24 @@ This document will use decision tree methods (including boosting, bagging, and r
 We used boosting and random forests to model and predict total updrs, a measure of Parkinson's severity.
 ### Boosting
 ```{r}
-boost.parkinsons=gbm(total_updrs~.,data=df_tot_nums[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+boost.parkinsons=gbm(total_updrs~.,data=df_tot_nums[train,],distribution="gaussian",n.trees=2000,shrinkage=0.01,interaction.depth=4)
 summary(boost.parkinsons,plotit=FALSE)
 ```
 The boosting model shows that age is the most significant predictor in the model. After that, dfa, tes_time, binary sex status, and hnr, as well a few other variables contribute more than 1%.
 
 Next, we looked at the error from this model.
 ```{r}
-n.trees=seq(from=100,to=10000,by=100)
-predmat=predict(boost.parkinsons,newdata=df_tot_nums[-train,],n.trees=n.trees)
+n.trees2=seq(from=100,to=2000,by=100)
+predmat=predict(boost.parkinsons,newdata=df_tot_nums[-train,],n.trees=n.trees2)
 dim(predmat)
 
 berr=with(df_tot_nums[-train,],apply( (predmat-total_updrs)^2,2,mean))
 renderPlot({
-  plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error")
+  plot(n.trees2,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error")
   abline(h=min(berr),col="red")
 })
 ```
-The error with 10000 trees gets quite low, which is a significant improvement over the models found in the previous project.
+The error with 5000 trees gets quite low, which is a significant improvement over the models found in the previous project.
 
 ### Random Forest
 We also used a random forest model to predict total updrs.
@@ -125,21 +125,21 @@ This shows that the total variance explained is 80%.
 We looked at the testing error and out-of-bag error estimate for this model for mtry of 1 through 19, the total number of predictors. Mtry of 19 is the same as bagging.
 ```{r}
 dim(df_tot_nums)
-oob.err=double(19)
-test.err=double(19)
-for(mtry in 1:19){
-  fit=randomForest(total_updrs~.,data=df_tot_nums,subset=train,ntree=400)
-  oob.err[mtry]=fit$mse[400]
+oob.err1=double(19)
+test.err1=double(19)
+for(mtry1 in 1:19){
+  fit=randomForest(total_updrs~.,data=df_tot_nums,subset=train,ntree=100)
+  oob.err1[mtry1]=fit$mse[100]
   pred=predict(fit,df_tot_nums[-train,])
-  test.err[mtry]=with(df_tot_nums[-train,],mean((total_updrs-pred)^2))
-  cat(mtry," ")
+  test.err1[mtry1]=with(df_tot_nums[-train,],mean((total_updrs-pred)^2))
+  cat(mtry1," ")
 }
 renderPlot({
-  matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+  matplot(1:mtry1,cbind(test.err1,oob.err1),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
   legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
 })
 ```
-Although tihs error seems to be jumping around quite a bit, it is important to note taht the y axis is only spaning 0.02. The dips in the error may be due to including correlated variables, of which there are a significant number. Boosting does a better job in this regard than random forests.
+Although this error seems to be jumping around quite a bit, it is important to note taht the y axis is only spaning 0.02. The dips in the error may be due to including correlated variables, of which there are a significant number. Boosting does a better job in this regard than random forests.
 
 ### Comparison to Subset Selection for Parkinson's Severity
 Boosting and random forests do a much better job of explaining variance in the total updrs, which is the main purpose of this dataset. Boosting also has good prediction accuracy in regards to this outcome.
@@ -147,12 +147,11 @@ Boosting and random forests do a much better job of explaining variance in the t
 K means clustering between total updrs and age (the most significant predictor in the boostng model) may illuminate why linear models didn't do such a good job.
 
 ```{r}
-x = df%>%dplyr::select(age,total_updrs)
-km.out=kmeans(x,6)
+x_km6 = df%>%dplyr::select(age,total_updrs)
+km.out=kmeans(x_km6,6)
 km.out
-par(mfrow = c(1,2))
-renderPlot(plot(x,col=km.out$cluster,cex=2,main = "K means clustering", pch=1,lwd=2))
-renderPlot(plot(x,col=df$subject,cex=2,main = "Actual subject",pch=1,lwd=2))
+renderPlot(plot(x_km6,col=km.out$cluster,cex=2,main = "K means clustering", pch=1,lwd=2))
+renderPlot(plot(x_km6,col=df$subject,cex=2,main = "Actual subject",pch=1,lwd=2))
 ```
 
 K means clustering with 6 clusters shows that the lowest total updrs scores are associated with lower ages, while the highest scores are associated with the higher ages. However, there is a lot of vertical overlap in the clusters of the middle ages, which would make it more difficult for a linear model to deal with.
@@ -171,17 +170,19 @@ We used boosting and random forests to predict sex, since our data predicted sex
 ### Boosting
 First, we used boosting to predict sex.
 ```{r}
-boost.df_sex=gbm(sex2~.,data=df_sex[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
-summary(boost.df_sex)
+##########error
+df_sex2 = df_sex%>%dplyr::select(-sex)
+boost.df_sex=gbm(sex2~.,data=df_sex2[train,],distribution="gaussian",n.trees=2000,shrinkage=0.01,interaction.depth=4)
+summary(boost.df_sex, plotit=FALSE)
 ```
 Boosting identifies jitter abs and age as the most important predictors.
 
 We then looked at the prediction error using boosting.
 ```{r}
-n.trees=seq(from=100,to=10000,by=100)
-predmat=predict(boost.df_sex,newdata=df_sex[-train,],n.trees=n.trees)
+n.trees3=seq(from=100,to=2000,by=100)
+predmat=predict(boost.df_sex,newdata=df_sex[-train,],n.trees=n.trees3)
 berr=with(df_sex[-train,],apply( (predmat-sex2)^2,2,mean))
-renderPlot(plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
+renderPlot(plot(n.trees3,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
 ```
 The test error got very low, below 0.02, with the boosting model.
 
@@ -198,17 +199,17 @@ The confusion matrix shows that this model does an overwhelmingly good job with 
 
 We looked at the out of bag and tesing error for mtry of 1 through 20, which 20 variables used at each split representing bagging.
 ```{r}
-oob.err=double(20)
-test.err=double(20)
-for(mtry in 1:20){
-  fit=randomForest(sex2~.-sex,data=df_sex,subset=train,mtry=mtry,ntree=400)
-  oob.err[mtry]=fit$mse[400]
+oob.err2=double(20)
+test.err2=double(20)
+for(mtry2 in 1:20){
+  fit=randomForest(sex2~.-sex,data=df_sex,subset=train,mtry=mtry2,ntree=100)
+  oob.err2[mtry2]=fit$mse[100]
   pred=predict(fit,df_sex[-train,])
-  test.err[mtry]=with(df_sex[-train,],mean((sex2-pred)^2))
-  cat(mtry," ")
+  test.err2[mtry2]=with(df_sex[-train,],mean((sex2-pred)^2))
+  cat(mtry2," ")
 }
 renderPlot({
-  matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+  matplot(1:mtry2,cbind(test.err2,oob.err2),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
   legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
 })
 ```
@@ -267,21 +268,12 @@ x=subset(df2, select = c(dfa, jitter_abs))
 x=matrix(unlist(x), ncol = 2)
 y=df2$sex2
 nlsvmfit=svm(factor(y)~.,data=dat,type="nu-classification",scale=TRUE,kernel="radial",cost=10)
-#plot(nlsvmfit, dat)
 ```
 Then we plotted the new SVM nonlinear decision boundary:
 ```{r}
-x1=seq(.5, .85, by=0.35/149.0)
-x2=seq(0, .0004, by=0.0004/149.0)
-xgrid=expand.grid(X1=x1,X2=x2)
-ygrid=predict(nlsvmfit,xgrid)
-func=predict(nlsvmfit,xgrid,decision.values=TRUE)
-func=attributes(func)$decision
-renderPlot({
-  plot(xgrid,col=as.numeric(ygrid),pch=20,cex=.2)
-  points(x,col=y+1,pch=19)
-  contour(x1,x2,matrix(func,150,150),level=0,add=TRUE)
-})
+renderPlot(
+  plot(nlsvmfit, dat)
+)
 ```
 This decision boundary is able to classify better than the linear one due to its ability to curve around the center to capture male points in the center of the boundary and female points in the outside red area of the boundary. The abnormal shape also juts out in places to capture points that a circular shape might not have included. Overall, this is probably close to the best decision boundary that SVM can create on this data. No shape would be able to correctlly classify all of the overlapping points towards the center.
 
@@ -295,20 +287,20 @@ Although we didn't look into predicting age as much in the previous project, we 
 ### Boosting
 First, we made a boosting model to predict age as a classification problem, dividing age into younger than or equal to 65 (designated 1) and older 65 (designated 0).
 ```{r}
-boost.age=gbm(age2~.-age,data=df_age[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+boost.age=gbm(age2~.-age,data=df_age[train,],distribution="gaussian",n.trees=2000,shrinkage=0.01,interaction.depth=4)
 summary(boost.age,plotit=FALSE)
 ```
 Total and motor updrs both played a significant role in predicting sex, which makes sense because Parkinson's worsens with age.
 
 We then looked at the testing error for the boosting model.
 ```{r}
-n.trees=seq(from=100,to=10000,by=100)
-predmat=predict(boost.age,newdata=df_age[-train,],n.trees=n.trees)
+n.trees5=seq(from=100,to=2000,by=100)
+predmat=predict(boost.age,newdata=df_age[-train,],n.trees=n.trees5)
 
 berr=with(df_age[-train,],apply( (predmat-age2)^2,2,mean))
-renderPlot({}
-  plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
-  abline(h=min(test.err),col="red")
+renderPlot({
+  plot(n.trees5,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error")
+  abline(h=min(berr),col="red")
 })
 ```
 The error continues to decrease as the model uses more and more trees and is less than 0.06, demonstrating the predictive strength of this model.
@@ -322,17 +314,17 @@ rf.age
 Less than 10% of the training data is misclassified, which is pretty good.
 We then looked at the out of bag and testing error, using mtry of 1 to 20.
 ```{r}
-oob.err=double(20)
-test.err=double(20)
-for(mtry in 1:20){
-  fit=randomForest(age2~.-age,data=df_age,subset=train,mtry=mtry,ntree=400)
-  oob.err[mtry]=fit$mse[400]
+oob.err3=double(20)
+test.err3=double(20)
+for(mtry3 in 1:20){
+  fit=randomForest(age2~.-age,data=df_age,subset=train,mtry=mtry3,ntree=100)
+  oob.err3[mtry3]=fit$mse[100]
   pred=predict(fit,df_age[-train,])
-  test.err[mtry]=with(df_age[-train,],mean((age2-pred)^2))
-  cat(mtry," ")
+  test.err3[mtry3]=with(df_age[-train,],mean((age2-pred)^2))
+  cat(mtry3," ")
 }
 renderPlot({
-  matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+  matplot(1:mtry3,cbind(test.err3,oob.err3),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
   legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
 })
 ```
@@ -355,33 +347,31 @@ In addition to exploring predictive methods using decision trees, we also used u
 ### K-means Clustering
 Using K means clustering, we were able to learn about the scope of the study. There were 42 subjects in the study, so we used 42 centers to cluster data using age and total updrs as factors. We then compared this to the real subject classification.
 ```{r}
-x = df%>%dplyr::select(age, total_updrs)
-km.out=kmeans(x,42)
-km.out
-par(mfrow = c(1, 2))
-renderPlot(plot(x,col=km.out$cluster,cex=2,main = "K means clustering", pch=1,lwd=2))
-renderPlot(plot(x,col=df$subject,cex=2,main = "Actual subject",pch=1,lwd=2))
+x_km = df%>%dplyr::select(age, total_updrs)
+km.out=kmeans(x_km,42)
+#km.out
+renderPlot(plot(x_km,col=km.out$cluster,cex=2,main = "K means clustering", pch=1,lwd=2))
+renderPlot(plot(x_km,col=df$subject,cex=2,main = "Actual subject",pch=1,lwd=2))
 ```
 Clustering was able to closely mimic true subject classification. One thing this visualization brings out is the fact that age does not change over the course of the study for each subject. This shows that the study was not longitudinal. A longitudinal study may yield more informative data because total updrs score would likely change significantly more over a course of years than over a course of months.
 
 As mentioned earlier, using fewer clusters with age does shows some meaningful trends in regards to total updrs. See the total updrs section above for more information.
 
-### Hierchical Clustering
+### Hierarchical Clustering
 We also used hierarchical clustering to look at the clustering of the data by subject.
 ```{r}
-hc.complete=hclust(dist(x),method="complete")
-hc.single=hclust(dist(x),method="single")
-hc.average=hclust(dist(x),method="average")
-par(mfrow = c(3, 1))
+hc.complete=hclust(dist(x_km),method="complete")
+hc.single=hclust(dist(x_km),method="single")
+hc.average=hclust(dist(x_km),method="average")
 renderPlot(plot(hc.complete))
 renderPlot(plot(hc.single))
 renderPlot(plot(hc.average))
 ```
-Cutting the trees at 42 (to represent the number of real subjects) and looking at the confusing matrix shows how well this model was able to cluser by subject.
+Cutting the trees at 42 (to represent the number of real subjects) and looking at the confusion matrix shows how well this model was able to cluster by subject.
 ```{r}
 hc.cut=cutree(hc.complete,42)
 table(hc.cut,df$subject)
-table(hc.cut,km.out$cluster)
+#table(hc.cut,km.out$cluster)
 ```
 Since the matrix is mostly zeros, this shows that hierarchical clustering was able to cluster well in regards to true subject. The results are similar to those found with k means.
 
@@ -401,7 +391,10 @@ Unsupervised learning methods using clustering demonstrated some characteristics
 
 
 ## Miscellaneous Insights
+
 [PCA first attempt](https://data.world/tarrantrl/f-17-eda-project-4/insights/2c86b2d3-9787-401c-91f5-9533d4cbaac6)
 [Boosting for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/ddd993c3-1fb8-441c-a3ec-3d543e566150)
 [Random Forests for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/4433b10d-c137-488d-92e4-ffcc3b71a0fc)
 [Decision Tree Predicting Status](https://data.world/tarrantrl/f-17-eda-project-4/insights/a405b6a8-0df4-40b1-9ff6-4051102ff011)
+
+
