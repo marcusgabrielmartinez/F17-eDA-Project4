@@ -53,7 +53,7 @@ df <- data.world::query(
 ```
 
 ## Setup
-We created several dataframes for our analyses. 
+We created several dataframes for our analyses. We created a binary version of the sex variable as well as a classification version of age (dividing into less than or equal to 65 and older than 65). We also removed subject from the dataframes we used for modeling because it is simily and id number. For predicting total updrs, we removed motor updrs because these are just different measurements of the same outcome variable; therefore, motor updrs is not a meaningful predictor of total updrs. We also created a training sample with indeces for half of the rows in the data.
 ```{r}
 attach(df)
 
@@ -89,7 +89,7 @@ RPDE - A nonlinear dynamical complexity measure
 DFA - Signal fractal scaling exponent 
 PPE - A nonlinear measure of fundamental frequency variation
 
-This document will compare models based on the predictors chosen by best subset selection, forward selection, and backward selection. These models include Logistic Regression, Linear Discriminant Analysis, Quadratic Discriminant Analysis, and K-Nearest Neighbors.
+This document will use decision tree methods (including boosting, bagging, and random forests) to predict total updrs score, sex, and age. We will then compare these results to those found with the methods used in Project 3. We will also look at unsupervised learning methods to explore more about the dataset.
 
 ## Predicting Parkinson's Severity
 We used boosting and random forests to model and predict total updrs, a measure of Parkinson's severity.
@@ -107,8 +107,10 @@ predmat=predict(boost.parkinsons,newdata=df_tot_nums[-train,],n.trees=n.trees)
 dim(predmat)
 
 berr=with(df_tot_nums[-train,],apply( (predmat-total_updrs)^2,2,mean))
-renderPlot(plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
-renderPlot(abline(h=min(berr),col="red"))
+renderPlot({
+  plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error")
+  abline(h=min(berr),col="red")
+})
 ```
 The error with 10000 trees gets quite low, which is a significant improvement over the models found in the previous project.
 
@@ -132,8 +134,10 @@ for(mtry in 1:19){
   test.err[mtry]=with(df_tot_nums[-train,],mean((total_updrs-pred)^2))
   cat(mtry," ")
 }
-renderPlot(matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error"))
-renderPlot(legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue")))
+renderPlot({
+  matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+  legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
+})
 ```
 Although tihs error seems to be jumping around quite a bit, it is important to note taht the y axis is only spaning 0.02. The dips in the error may be due to including correlated variables, of which there are a significant number. Boosting does a better job in this regard than random forests.
 
@@ -203,8 +207,10 @@ for(mtry in 1:20){
   test.err[mtry]=with(df_sex[-train,],mean((sex2-pred)^2))
   cat(mtry," ")
 }
-renderPlot(matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error"))
-renderPlot(legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue")))
+renderPlot({
+  matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+  legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
+})
 ```
 Since the error reaches a minimum at mtry=20, this shows that bagging actually does a better job than random forests.
 
@@ -300,8 +306,10 @@ n.trees=seq(from=100,to=10000,by=100)
 predmat=predict(boost.age,newdata=df_age[-train,],n.trees=n.trees)
 
 berr=with(df_age[-train,],apply( (predmat-age2)^2,2,mean))
-renderPlot(plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
-renderPlot(abline(h=min(test.err),col="red"))
+renderPlot({}
+  plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
+  abline(h=min(test.err),col="red")
+})
 ```
 The error continues to decrease as the model uses more and more trees and is less than 0.06, demonstrating the predictive strength of this model.
 
@@ -323,8 +331,10 @@ for(mtry in 1:20){
   test.err[mtry]=with(df_age[-train,],mean((age2-pred)^2))
   cat(mtry," ")
 }
-matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
-legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
+renderPlot({
+  matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error")
+  legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue"))
+})
 ```
 As with predicting sex using random forests, this graph shows that regular bagging actually does a better job than the random forest models. Again, this model has error less than 0.06 like boosting. The out of bag error closely predicts the testing error as well. Both of these models predict age classification with great accuracy.
 
@@ -339,24 +349,55 @@ For relevent insights, see:
 
 
 
-### Comparison to Project 3
-
 ## Unsupervised Learning
+In addition to exploring predictive methods using decision trees, we also used unsupervised learning methods to discover more about our data.
 
-### k-means Clustering
+### K-means Clustering
+Using K means clustering, we were able to learn about the scope of the study. There were 42 subjects in the study, so we used 42 centers to cluster data using age and total updrs as factors. We then compared this to the real subject classification.
+```{r}
+x = df%>%dplyr::select(age, total_updrs)
+km.out=kmeans(x,42)
+km.out
+par(mfrow = c(1, 2))
+renderPlot(plot(x,col=km.out$cluster,cex=2,main = "K means clustering", pch=1,lwd=2))
+renderPlot(plot(x,col=df$subject,cex=2,main = "Actual subject",pch=1,lwd=2))
+```
+Clustering was able to closely mimic true subject classification. One thing this visualization brings out is the fact that age does not change over the course of the study for each subject. This shows that the study was not longitudinal. A longitudinal study may yield more informative data because total updrs score would likely change significantly more over a course of years than over a course of months.
+
+As mentioned earlier, using fewer clusters with age does shows some meaningful trends in regards to total updrs. See the total updrs section above for more information.
 
 ### Hierchical Clustering
+We also used hierarchical clustering to look at the clustering of the data by subject.
+```{r}
+hc.complete=hclust(dist(x),method="complete")
+hc.single=hclust(dist(x),method="single")
+hc.average=hclust(dist(x),method="average")
+par(mfrow = c(3, 1))
+renderPlot(plot(hc.complete))
+renderPlot(plot(hc.single))
+renderPlot(plot(hc.average))
+```
+Cutting the trees at 42 (to represent the number of real subjects) and looking at the confusing matrix shows how well this model was able to cluser by subject.
+```{r}
+hc.cut=cutree(hc.complete,42)
+table(hc.cut,df$subject)
+table(hc.cut,km.out$cluster)
+```
+Since the matrix is mostly zeros, this shows that hierarchical clustering was able to cluster well in regards to true subject. The results are similar to those found with k means.
 
+The fact that the data can ultimately be traced back pretty easily to sujbect may have an effect on our analyses. Although we removed subject from our other models, a lack of variation within the data points for each subject may be why we had some trouble predicting total updrs in the last project. For example, age does not predict updrs score for one subject because that subject's age did not change. Perhaps it would be beneficial to take into accound test time and create a floating point age that takes into account the passage of time within each subject's data.
+
+Find relevant insights here:
 [K means for total updrs and age](https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade)
 [Hierarchical clustering](https://data.world/tarrantrl/f-17-eda-project-4/insights/dd034ffe-c196-43cc-a219-fa559ffd2bf1)
 [K means clustering for total updrs and subject](https://data.world/tarrantrl/f-17-eda-project-4/insights/5c848361-bac7-490c-b4b9-ba13b310e545)
 
 
 ## Findings
-### Comparison to Project 3 Methods
 
+Overall, decision trees and related methods had greater predictive power and accuracy than the models we used in Project 3. Particularly for total updrs, boosting and random forests made prediction feasible when it did not seem possible with linear models found in subset selection. This is extremely encouraging because total updrs is the most medically relevant outcome to predict. Additionally, due to the interpretability of decision trees, simpler decision trees could be of use to doctors in diagnosing the early disease.
 
-### Final Thoughts
+Unsupervised learning methods using clustering demonstrated some characteristics about our data that help to explain why linear models and simpler classification schemes did not always fair well. Due to a lack of variation in the data, particularly regarding each subject, there is a lot of overlap between data points that makes trends obscure. K means clustering helped to visualize some of these trends in a different way, and boosting and bagging were able to predict these trends as well.
 
 
 ## Miscellaneous Insights
