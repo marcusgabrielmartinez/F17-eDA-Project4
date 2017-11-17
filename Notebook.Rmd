@@ -1,0 +1,244 @@
+---
+title: "Prediction of Parkinson's Disease"
+author: 'Group 2: Kelly Jennings, Stefanos Kapetanakis, Marcus Martinez, Rachel Tarrant, Changyong Yi'
+resource_files:
+- .Renviron
+output:
+  html_notebook:
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(modelr)
+require(dplyr)
+require(MASS)
+require(ISLR)
+require(ggplot2)
+library(leaps)
+library(glmnet)
+require(tree)
+require(randomForest)
+require(gbm)
+require(data.world)
+require(shiny)
+knitr::opts_chunk$set(echo = TRUE)
+```
+  
+## **R Session Info**  
+
+```{r}
+sessionInfo()
+```
+
+## **Github Link** 
+https://github.com/marcusgabrielmartinez/F17-eDA-Project4
+
+## **Data.World Link**
+https://data.world/tarrantrl/f-17-eda-project-4
+
+## **Connecting to data.world** 
+```{r}
+project <- "https://data.world/tarrantrl/parkinsons-telemonitoring"
+data.world::set_config(cfg_env("DW_API"))
+df <- data.world::query(
+  data.world::qry_sql("SELECT * FROM parkinsons_telemonitoring"),
+  dataset = project
+)
+```
+
+## Setup
+We created several dataframes for our analyses. 
+```{r}
+attach(df)
+
+df_age <- df %>% dplyr::select(., -subject) %>% dplyr::mutate(age2 = ifelse(age <= 65, 1, 0)) %>% dplyr::mutate(sex = as.factor(sex))
+
+df_sex <- df %>% dplyr::select(., -subject) %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::mutate(age = as.factor(age))
+
+df_tot_nums = df %>% dplyr::mutate(sex2 = ifelse(sex == "true", 1, 0)) %>% dplyr::select(-sex,-subject,-motor_updrs)
+
+train=sample(1:nrow(df_tot_nums),2937)
+```
+## **Introduction** 
+
+"This dataset is composed of a range of biomedical voice measurements from 42 people with early-stage Parkinson's disease recruited to a six-month trial of a telemonitoring device for remote symptom progression monitoring. The recordings were automatically captured in the patient's homes.
+
+Columns in the table contain subject number, subject age, subject gender, time interval from baseline recruitment date, motor UPDRS, total UPDRS, and 16 biomedical voice measures. Each row corresponds to one of 5,875 voice recording from these individuals. The main aim of the data is to predict the motor and total UPDRS scores ('motor_UPDRS' and 'total_UPDRS') from the 16 voice measures."
+
+
+subject# - Integer that uniquely identifies each subject 
+age - Subject age 
+sex - Subject gender '0' - male, '1' - female 
+test_time - Time since recruitment into the trial. The integer part is the number of days since recruitment. 
+motor_UPDRS - Clinician's motor UPDRS score, linearly interpolated 
+total_UPDRS - Clinician's total UPDRS score, linearly interpolated (UPDRS is stands for Unified Parkison's Disease Rating Scale and is used to rate the severity of Parkinson's)
+Jitter(%),Jitter(Abs),Jitter:RAP,Jitter:PPQ5,Jitter:DDP - Several measures of variation in fundamental frequency (fundamental frequency is the lowest frequency of a sound wave).
+Shimmer,Shimmer(dB),Shimmer:APQ3,Shimmer:APQ5,Shimmer:APQ11,Shimmer:DDA - Several measures of variation in amplitude 
+NHR,HNR - Two measures of ratio of noise to tonal components in the voice 
+RPDE - A nonlinear dynamical complexity measure 
+DFA - Signal fractal scaling exponent 
+PPE - A nonlinear measure of fundamental frequency variation
+
+This document will compare models based on the predictors chosen by best subset selection, forward selection, and backward selection. These models include Logistic Regression, Linear Discriminant Analysis, Quadratic Discriminant Analysis, and K-Nearest Neighbors.
+
+## Predicting Parkinson's Severity
+We used boosting and random forests to model and predict total updrs, a measure of Parkinson's severity.
+### Boosting
+```{r}
+boost.parkinsons=gbm(total_updrs~.,data=df_tot_nums[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+summary(boost.parkinsons,plotit=FALSE)
+```
+The boosting model shows that age is the most significant predictor in the model. After that, dfa, tes_time, binary sex status, and hnr, as well a few other variables contribute more than 1%.
+
+Next, we looked at the error from this model.
+```{r}
+n.trees=seq(from=100,to=10000,by=100)
+predmat=predict(boost.parkinsons,newdata=df_tot_nums[-train,],n.trees=n.trees)
+dim(predmat)
+
+berr=with(df_tot_nums[-train,],apply( (predmat-total_updrs)^2,2,mean))
+renderPlot(plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
+renderPlot(abline(h=min(berr),col="red"))
+```
+The error with 10000 trees gets quite low, which is a significant improvement over the models found in the previous project.
+
+### Random Forest
+We also used a random forest model to predict total updrs.
+```{r}
+rf.total=randomForest(total_updrs~.,data=df_tot_nums,subset=train)
+rf.total
+```
+This shows that the total variance explained is 80%.
+
+We looked at the testing error and out-of-bag error estimate for this model for mtry of 1 through 19, the total number of predictors. Mtry of 19 is the same as bagging.
+```{r}
+dim(df_tot_nums)
+oob.err=double(19)
+test.err=double(19)
+for(mtry in 1:19){
+  fit=randomForest(total_updrs~.,data=df_tot_nums,subset=train,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_tot_nums[-train,])
+  test.err[mtry]=with(df_tot_nums[-train,],mean((total_updrs-pred)^2))
+  cat(mtry," ")
+}
+renderPlot(matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error"))
+renderPlot(legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue")))
+```
+Although tihs error seems to be jumping around quite a bit, it is important to note taht the y axis is only spaning 0.02. The dips in the error may be due to including correlated variables, of which there are a significant number. Boosting does a better job in this regard than random forests.
+
+### Comparison to Subset Selection for Parkinson's Severity
+Boosting and random forests do a much better job of explaining variance in the total updrs, which is the main purpose of this dataset. Boosting also has good prediction accuracy in regards to this outcome.
+
+K means clustering between total updrs and age (the most significant predictor in the boostng model) may illuminate why linear models didn't do such a good job.
+
+```{r}
+x = df%>%dplyr::select(age,total_updrs)
+km.out=kmeans(x,6)
+km.out
+par(mfrow = c(1,2))
+renderPlot(plot(x,col=km.out$cluster,cex=2,main = "K means clustering", pch=1,lwd=2))
+renderPlot(plot(x,col=df$subject,cex=2,main = "Actual subject",pch=1,lwd=2))
+```
+
+K means clustering with 6 clusters shows that the lowest total updrs scores are associated with lower ages, while the highest scores are associated with the higher ages. However, there is a lot of vertical overlap in the clusters of the middle ages, which would make it more difficult for a linear model to deal with.
+
+Find relevant insights here:
+[Boosting for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/2e571834-aa7c-4ba9-887c-5239895d4692)
+[Updated boosting for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/4635b284-3125-4c14-85f4-1a06a2b4afa5)
+[Random forest for total updrs](https://data.world/tarrantrl/f-17-eda-project-4/insights/939f6c2e-6402-42bb-980a-7debf8507a62)
+[K means for total updrs and age](https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade)
+
+
+
+## Predicting Sex
+We used boosting and random forests to predict sex, since our data predicted sex well in the previous project.
+
+### Boosting
+First, we used boosting to predict sex.
+```{r}
+boost.df_sex=gbm(sex2~.,data=df_sex[train,],distribution="gaussian",n.trees=10000,shrinkage=0.01,interaction.depth=4)
+summary(boost.df_sex)
+```
+Boosting identifies jitter abs and age as the most important predictors.
+
+We then looked at the prediction error using boosting.
+```{r}
+n.trees=seq(from=100,to=10000,by=100)
+predmat=predict(boost.df_sex,newdata=df_sex[-train,],n.trees=n.trees)
+berr=with(df_sex[-train,],apply( (predmat-sex2)^2,2,mean))
+renderPlot(plot(n.trees,berr,pch=19,ylab="Mean Squared Error", xlab="# Trees",main="Boosting Test Error"))
+```
+The test error got very low, below 0.02, with the boosting model.
+
+### Random Forest
+We also used random forests to predict sex.
+```{r}
+rf.sex=randomForest(as.factor(sex2)~.-sex,data=df_sex,subset=train)
+rf.sex
+```
+The confusion matrix shows that this model does an overwhelmingly good job with mtry of 4.
+
+We looked at the out of bag and tesing error for mtry of 1 through 20, which 20 variables used at each split representing bagging.
+```{r}
+oob.err=double(20)
+test.err=double(20)
+for(mtry in 1:20){
+  fit=randomForest(sex2~.-sex,data=df_sex,subset=train,mtry=mtry,ntree=400)
+  oob.err[mtry]=fit$mse[400]
+  pred=predict(fit,df_sex[-train,])
+  test.err[mtry]=with(df_sex[-train,],mean((sex2-pred)^2))
+  cat(mtry," ")
+}
+renderPlot(matplot(1:mtry,cbind(test.err,oob.err),pch=19,col=c("red","blue"),type="b",ylab="Mean Squared Error"))
+renderPlot(legend("topright",legend=c("OOB","Test"),pch=19,col=c("red","blue")))
+```
+Since the error reaches a minimum at mtry=20, this shows that bagging actually does a better job than random forests.
+
+### Comparison to K means
+
+### Comparison to Lasso
+
+Find relevant insights here:
+[Boosing for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/6ce8d905-8851-46a0-9ac9-ca2a96ec88bc)
+[Decision tree for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/b23e858d-45d1-4c2e-9022-ae4046360e50)
+[Random forest for sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/a16305c3-ebf6-4d66-b1d7-1bb20731d641)
+[Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
+
+
+## Predicting Age
+
+[Decision tree predicting age](https://data.world/tarrantrl/f-17-eda-project-4/insights/3f7ef916-3e2b-4cdc-93d1-e53ab8aa7c43)
+[Updated decision tree predicting age](https://data.world/tarrantrl/f-17-eda-project-4/insights/2b7c0f4e-f6f5-4571-8ed7-6cb160813a22)
+[Predicting age with boosting](https://data.world/tarrantrl/f-17-eda-project-4/insights/4142e8c0-817c-4332-a12e-356bfdbe8990)
+[Random forest for age](https://data.world/tarrantrl/f-17-eda-project-4/insights/319cb9ba-854d-4051-a405-7b9899767764)
+[Boosting for age](https://data.world/tarrantrl/f-17-eda-project-4/insights/20ec2b27-1732-4702-b923-a268529fa29a)
+[Updated random forests for age and sex](https://data.world/tarrantrl/f-17-eda-project-4/insights/ba5f6283-21c5-49ce-9d36-c90d260b6299)
+
+
+
+### Comparison to Project 3
+
+## Unsupervised Learning
+[K means for total updrs and age](https://data.world/tarrantrl/f-17-eda-project-4/insights/7302aa49-2762-441e-a0fe-949fa2e88ade)
+[Hierarchical clustering](https://data.world/tarrantrl/f-17-eda-project-4/insights/dd034ffe-c196-43cc-a219-fa559ffd2bf1)
+[K means clustering for total updrs and subject](https://data.world/tarrantrl/f-17-eda-project-4/insights/5c848361-bac7-490c-b4b9-ba13b310e545)
+
+
+## Findings
+### Comparison to Project 3 Methods
+
+
+### Final Thoughts
+
+
+## Miscellaneous Insights
+[PCA first attempt](https://data.world/tarrantrl/f-17-eda-project-4/insights/2c86b2d3-9787-401c-91f5-9533d4cbaac6)
+[Linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/fbe1f5d3-4b76-421c-8da7-8fd9b9b3bd65)
+[Non linear SVM for jitter abs and dfa](https://data.world/tarrantrl/f-17-eda-project-4/insights/ced4b656-b6ba-4c34-ba96-39ff79856e9c)
+[Boosting for status](https://data.world/tarrantrl/f-17-eda-project-4/insights/ddd993c3-1fb8-441c-a3ec-3d543e566150)
